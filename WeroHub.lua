@@ -221,3 +221,27 @@ local Toggle = PlayerTab:CreateToggle({
         end
     end,
 })
+
+local ScriptsTab = Window:CreateTab("Scripts", 4483362458) -- Title, Image
+
+local Button = ScriptsTab:CreateButton({
+    Name = "Infinity yield",
+    Callback = function()
+        loadstring(game:HttpGet("https://pastebin.com/raw/EiARjNme"))()
+    end,
+ })
+
+ local Button = ScriptsTab:CreateButton({
+    Name = "Dex",
+    Callback = function()
+        loadstring(game:HttpGet("https://pastebin.com/raw/FeMbE4xS"))()
+    end,
+ })
+
+ local Button = ScriptsTab:CreateButton({
+    Name = "RemoteSpy v3",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/JaoExploiter/StellySpyV3/refs/heads/main/StellySpyV3.txt"))()
+    end,
+ })
+
