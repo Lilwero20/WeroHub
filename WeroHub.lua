@@ -2,7 +2,7 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
     Name = "WeroHub",
-    Icon = 0, -- Icon in Topbar. Can use Lucide Icons (string) or Roblox Image (number). 0 to use no icon (default).
+    Icon = 89001596756285, -- Icon in Topbar. Can use Lucide Icons (string) or Roblox Image (number). 0 to use no icon (default).
     LoadingTitle = "Loading WeroHub",
     LoadingSubtitle = "by Wero",
     Theme = "Default", -- Check https://docs.sirius.menu/rayfield/configuration/themes
@@ -36,7 +36,7 @@ local Window = Rayfield:CreateWindow({
 
  local TeleportTab = Window:CreateTab("Teleport", 4483362458) -- Title, Image
 
- local Input = TeleportTab:CreateInput({
+local Input = TeleportTab:CreateInput({
     Name = "TP to Player",
     CurrentValue = "",
     PlaceholderText = "Input Placeholder",
@@ -56,18 +56,34 @@ local Window = Rayfield:CreateWindow({
                 local character = localPlayer.Character
                 if character and character:FindFirstChild("HumanoidRootPart") then
                     local humanoidRootPart = character.HumanoidRootPart
-                    local distance = (targetPosition - humanoidRootPart.Position).Magnitude
+
+                    -- Subir 10 studs primero
+                    humanoidRootPart.CFrame = humanoidRootPart.CFrame * CFrame.new(0, 10, 0)
+
+                    -- Volar hacia arriba del jugador (unos 10 studs arriba)
+                    local aboveTargetPosition = targetPosition + Vector3.new(0, 10, 0)
+
+                    local distance = (aboveTargetPosition - humanoidRootPart.Position).Magnitude
                     local speed = 250
                     local tweenInfo = TweenInfo.new(distance / speed, Enum.EasingStyle.Linear)
-                    local tween = TweenService:Create(humanoidRootPart, tweenInfo, {CFrame = CFrame.new(targetPosition)})
-                    tween:Play()
+                    local flyTween = TweenService:Create(humanoidRootPart, tweenInfo, {CFrame = CFrame.new(aboveTargetPosition)})
+                    flyTween:Play()
+
+                    flyTween.Completed:Connect(function()
+                        -- Cuando llegue arriba, bajamos sobre el jugador
+                        local descendTweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.In)
+                        local descendTween = TweenService:Create(humanoidRootPart, descendTweenInfo, {CFrame = CFrame.new(targetPosition)})
+                        descendTween:Play()
+                    end)
                 end
             end
         end
         
         flyToPlayer(targetPlayerName)
     end,
- })
+})
+
+
 
  local Toggle = TeleportTab:CreateToggle({
     Name = "Tp to Fruit",
@@ -227,7 +243,7 @@ local ScriptsTab = Window:CreateTab("Scripts", 4483362458) -- Title, Image
 local Button = ScriptsTab:CreateButton({
     Name = "Infinity yield",
     Callback = function()
-        loadstring(game:HttpGet("https://pastebin.com/raw/EiARjNme"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
     end,
  })
 
@@ -239,9 +255,8 @@ local Button = ScriptsTab:CreateButton({
  })
 
  local Button = ScriptsTab:CreateButton({
-    Name = "RemoteSpy v3",
+    Name = "Auto Collect orbs",
     Callback = function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/JaoExploiter/StellySpyV3/refs/heads/main/StellySpyV3.txt"))()
+        
     end,
  })
-
