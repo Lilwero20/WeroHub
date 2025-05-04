@@ -1,3 +1,52 @@
+-- Capturar prints en TextLabel
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Crear GUI para mensajes si no existe
+if not PlayerGui:FindFirstChild("MensajesGUI") then
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "MensajesGUI"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = PlayerGui
+
+    local mensajeLabel = Instance.new("TextLabel")
+    mensajeLabel.Name = "MensajeLabel"
+    mensajeLabel.Text = ""
+    mensajeLabel.Size = UDim2.new(0.3, 0, 0.07, 0)
+    mensajeLabel.Position = UDim2.new(0.35, 0, 0.05, 0)
+    mensajeLabel.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    mensajeLabel.TextColor3 = Color3.fromRGB(0, 255, 127)
+    mensajeLabel.TextSize = 18
+    mensajeLabel.Font = Enum.Font.GothamBold
+    mensajeLabel.Visible = false
+    mensajeLabel.BackgroundTransparency = 0.2
+    mensajeLabel.TextScaled = true
+    mensajeLabel.BorderSizePixel = 0
+    mensajeLabel.Parent = screenGui
+end
+
+-- Redirigir print a TextLabel y consola
+local originalPrint = print
+print = function(...)
+    local args = {...}
+    local text = ""
+    for i, v in ipairs(args) do
+        text = text .. tostring(v)
+        if i < #args then text = text .. " " end
+    end
+    -- Mostrar en consola
+    originalPrint(text)
+    -- Mostrar en GUI
+    local gui = PlayerGui:WaitForChild("MensajesGUI")
+    local label = gui:WaitForChild("MensajeLabel")
+    label.Text = text
+    label.Visible = true
+    task.delay(3, function()
+        label.Visible = false
+    end)
+end
+
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
@@ -220,47 +269,127 @@ end})
 -- TROLEAR TAB
 -- ============================================================
 -- Install ResizePlayer System
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ServerScriptService = game:GetService("ServerScriptService")
-local Players = game:GetService("Players")
-
--- Botón para instalar ResizePlayer
-TrolearTab:CreateButton({
-    Name = "📦 Instalar ResizePlayer",
-    Callback = function()
-        if not ReplicatedStorage:FindFirstChild("ResizePlayer") then
-		mantenimiento.Parent = StarterGui
-            local remote = Instance.new("RemoteEvent")
-            remote.Name = "ResizePlayer"
-            remote.Parent = ReplicatedStorage
-        end
-
-        if not ServerScriptService:FindFirstChild("ResizePlayerScript") then
-            local src = [[
-                local RS = game:GetService("ReplicatedStorage")
-                local PS = game:GetService("Players")
-                RS:WaitForChild("ResizePlayer").OnServerEvent:Connect(function(_, name, scale)
-                    local p = PS:FindFirstChild(name)
-                    if p and p.Character then
-                        for _, d in ipairs(p.Character:GetDescendants()) do
-                            if d:IsA("BasePart") then
-                                d.Size *= scale
-                            end
-                        end
-                        local h = p.Character:FindFirstChildOfClass("Humanoid")
-                        if h then
-                            h.HipHeight *= scale
-                            h:BuildRigFromAttachments()
-                        end
+TrolearTab:CreateButton({Name="📦 Instalar ResizePlayer", Callback=function()
+    if not ReplicatedStorage:FindFirstChild("ResizePlayer") then
+        Instance.new("RemoteEvent").Name="ResizePlayer"; ReplicatedStorage.RemoteEvent.Parent=ReplicatedStorage
+    end
+    if not ServerScriptService:FindFirstChild("ResizePlayerScript") then
+        local src = [[
+            local RS = game:GetService("ReplicatedStorage")
+            local PS = game:GetService("Players")
+            RS:WaitForChild("ResizePlayer").OnServerEvent:Connect(function(_,name,scale)
+                local p=PS:FindFirstChild(name)
+                if p and p.Character then
+                    for _,d in ipairs(p.Character:GetDescendants()) do
+                        if d:IsA("BasePart") then d.Size *= scale end
                     end
-                end)
-            ]]
-            local scr = Instance.new("Script")
-            scr.Name = "ResizePlayerScript"
-            scr.Source = src
-            scr.Parent = ServerScriptService
+                    local h=p.Character:FindFirstChildOfClass("Humanoid")
+                    if h then h.HipHeight*=scale; h:BuildRigFromAttachments() end
+                end
+            end)
+        ]]
+        local scr=Instance.new("Script"); scr.Name="ResizePlayerScript"; scr.Source=src; scr.Parent=ServerScriptService
+    end
+end})
+
+-- Resize Buttons would go here after installation if desired
+
+
+-- ============================================================
+-- NUEVO: Herramienta de Edición de Bloques
+-- ============================================================
+HerramientasTab:CreateButton({
+    Name = "BlockEditor Tool",
+    Callback = function()
+        local rs = ReplicatedStorage
+        local tool = rs:FindFirstChild("BlockEditorTool")
+        -- Si no existe, crearlo
+        if not tool then
+            tool = Instance.new("Tool")
+            tool.Name = "BlockEditorTool"
+            -- Handle
+            local handle = Instance.new("Part")
+            handle.Name = "Handle"
+            handle.Size = Vector3.new(1,1,1)
+            handle.Parent = tool
+            -- LocalScript para la lógica básica
+            local logic = Instance.new("LocalScript")
+            logic.Name = "BlockEditorScript"
+            logic.Source = [[
+    local tool = script.Parent
+    local player = game.Players.LocalPlayer
+    local mouse = player:GetMouse()
+    local selected
+    local selectionBox = Instance.new("SelectionBox")
+    selectionBox.LineThickness = 0.1
+    selectionBox.SurfaceTransparency = 0.5
+    selectionBox.Color3 = Color3.new(0, 1, 0)
+    -- Circles handles
+    local handles = {}
+    local function createHandle(position)
+        local part = Instance.new("Part")
+        part.Shape = Enum.PartType.Ball
+        part.Size = Vector3.new(0.5, 0.5, 0.5)
+        part.Anchored = true
+        part.CanCollide = false
+        part.Color = Color3.new(0, 1, 0)
+        part.Parent = workspace
+        part.CFrame = position
+        return part
+    end
+    local function showHandles(target)
+        for _, h in pairs(handles) do h:Destroy() end
+        handles = {}
+        local cf = target.CFrame
+        local size = target.Size
+        local corners = {
+            cf * CFrame.new(size.X/2, size.Y/2, size.Z/2),
+            cf * CFrame.new(-size.X/2, size.Y/2, size.Z/2),
+            cf * CFrame.new(size.X/2, size.Y/2, -size.Z/2),
+            cf * CFrame.new(-size.X/2, size.Y/2, -size.Z/2)
+        }
+        for _, pos in ipairs(corners) do
+            table.insert(handles, createHandle(pos))
         end
     end
+    mouse.Button2Down:Connect(function()
+        local target = mouse.Target
+        if target and target:IsA("BasePart") then
+            if selected then
+                selectionBox.Adornee = nil
+            end
+            selected = target
+            selectionBox.Adornee = selected
+            selectionBox.Parent = workspace
+            showHandles(selected)
+        end
+    end)
+    mouse.KeyDown:Connect(function(key)
+        if not selected then return end
+        key = key:lower()
+        if key == "s" then
+            -- scale uniformly by 10%
+            selected.Size = selected.Size * 1.1
+            selectionBox.Adornee = selected
+            showHandles(selected)
+        elseif key == "m" then
+            -- move upward by 1 stud
+            selected.CFrame = selected.CFrame * CFrame.new(0,1,0)
+            selectionBox.Adornee = selected
+            showHandles(selected)
+        end
+    end)
+]]
+            logic.Parent = tool
+            -- Poner en ReplicatedStorage
+            tool.Parent = rs
+            print("✅ BlockEditorTool creado en ReplicatedStorage")
+        end
+        -- Dar al jugador
+        local clone = tool:Clone()
+        clone.Parent = localPlayer:WaitForChild("Backpack")
+        print("✅ BlockEditorTool dado al jugador")
+    end,
 })
 
 -- Inputs para nombre y escala
@@ -294,7 +423,67 @@ TrolearTab:CreateButton({
     end
 })
 
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local VirtualUser = game:GetService("VirtualUser")
 
--- Resize Buttons would go here after installation if desired
+-- Crear GUI si no existe
+if not PlayerGui:FindFirstChild("MensajesGUI") then
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "MensajesGUI"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = PlayerGui
 
+    local mensajeLabel = Instance.new("TextLabel")
+    mensajeLabel.Name = "MensajeLabel"
+    mensajeLabel.Text = ""
+    mensajeLabel.Size = UDim2.new(0.3, 0, 0.07, 0)
+    mensajeLabel.Position = UDim2.new(0.35, 0, 0.05, 0)
+    mensajeLabel.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    mensajeLabel.TextColor3 = Color3.fromRGB(0, 255, 127)
+    mensajeLabel.TextSize = 18
+    mensajeLabel.Font = Enum.Font.GothamBold
+    mensajeLabel.Visible = false
+    mensajeLabel.BackgroundTransparency = 0.2
+    mensajeLabel.TextScaled = true
+    mensajeLabel.BorderSizePixel = 0
+    mensajeLabel.Parent = screenGui
+end
 
+-- Función para mostrar mensajes bonitos
+local function MostrarMensaje(texto)
+    local gui = PlayerGui:WaitForChild("MensajesGUI")
+    local label = gui:WaitForChild("MensajeLabel")
+    label.Text = texto
+    label.Visible = true
+    task.wait(3)
+    label.Visible = false
+end
+
+-- Variable para manejar conexión Anti AFK
+local AntiAFK_Connection
+
+-- Toggle Anti AFK en Rayfield
+TrolearTab:CreateToggle({
+    Name = "🛡️ Anti AFK",
+    CurrentValue = false,
+    Callback = function(Value)
+        if Value then
+            AntiAFK_Connection = Players.LocalPlayer.Idled:Connect(function()
+                VirtualUser:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+                task.wait(1)
+                VirtualUser:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+            end)
+            MostrarMensaje("✅ Anti AFK activado.")
+        else
+            if AntiAFK_Connection then
+                AntiAFK_Connection:Disconnect()
+                AntiAFK_Connection = nil
+                MostrarMensaje("❌ Anti AFK desactivado.")
+            end
+        end
+    end,
+})
+
+-- End of WeroHub Script
