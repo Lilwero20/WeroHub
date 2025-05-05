@@ -139,18 +139,19 @@ local flightConnection = nil
 local flightRunning = false
 
 TeleportTab:CreateToggle({
-    Name = "Ruta Voladora en Bucle (reinicia al morir)",
+    Name = "Ruta Voladora (sin rebote y reinicia al morir)",
     CurrentValue = false,
     Callback = function(value)
         flyingEnabled = value
 
         local function startFlying()
-            if flightRunning then return end -- Evitar múltiples vuelos
+            if flightRunning then return end
             flightRunning = true
 
             task.spawn(function()
                 local char = localPlayer.Character or localPlayer.CharacterAdded:Wait()
                 local hrp = char:WaitForChild("HumanoidRootPart")
+                local humanoid = char:WaitForChild("Humanoid")
                 local TweenService = game:GetService("TweenService")
 
                 local waypoints = {
@@ -162,17 +163,27 @@ TeleportTab:CreateToggle({
 
                 local speed = 300
 
-                local function flyTo(position)
+                local function flyTo(position, isFinal)
                     local distance = (hrp.Position - position).Magnitude
                     local time = distance / speed
                     local tween = TweenService:Create(hrp, TweenInfo.new(time, Enum.EasingStyle.Linear), {CFrame = CFrame.new(position)})
                     tween:Play()
                     tween.Completed:Wait()
+
+                    if isFinal then
+                        -- Desactivar velocidad residual
+                        hrp.Velocity = Vector3.zero
+                        hrp.RotVelocity = Vector3.zero
+
+                        -- Suavemente posicionarse un poco arriba del suelo
+                        task.wait(0.1)
+                        hrp.CFrame = CFrame.new(position + Vector3.new(0, 1.5, 0))
+                    end
                 end
 
-                for _, pos in ipairs(waypoints) do
+                for i, pos in ipairs(waypoints) do
                     if not flyingEnabled then break end
-                    flyTo(pos)
+                    flyTo(pos, i == #waypoints)
                 end
 
                 flightRunning = false
@@ -186,7 +197,7 @@ TeleportTab:CreateToggle({
             if flightConnection then flightConnection:Disconnect() end
             flightConnection = localPlayer.CharacterAdded:Connect(function()
                 if flyingEnabled then
-                    flightRunning = false -- resetear bandera
+                    flightRunning = false
                     task.wait(1)
                     startFlying()
                 end
@@ -200,7 +211,6 @@ TeleportTab:CreateToggle({
         end
     end,
 })
-
 
 -- ============================================================
 -- PLAYER TAB
