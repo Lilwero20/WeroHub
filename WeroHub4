@@ -73,6 +73,7 @@ local ScriptsTab    = Window:CreateTab("Scripts", 4483362458)
 local CharacterTab  = Window:CreateTab("Modificar Características", 4483362458)
 local HerramientasTab = Window:CreateTab("🔧 Herramientas", 4483362458)
 local TrolearTab    = Window:CreateTab("Trolear", 4483362458)
+local MiscTab = Window:CreateTab("🔧 Miscs", 4483362458)
 
 -- Services
 local Players           = game:GetService("Players")
@@ -133,27 +134,73 @@ TeleportTab:CreateToggle({
 })
 
 -- Ir a GoldenChest
-TeleportTab:CreateButton({
-    Name = "Ir a GoldenChest", Callback = function()
-        local char = localPlayer.Character
-        if not (char and char:FindFirstChild("HumanoidRootPart")) then return end
-        local hrp = char.HumanoidRootPart
-        local target = Workspace:WaitForChild("BoatStages"):WaitForChild("NormalStages"):WaitForChild("TheEnd"):WaitForChild("GoldenChest"):WaitForChild("Trigger")
-        -- Ascend
-        TweenService:Create(hrp, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {CFrame = hrp.CFrame * CFrame.new(0,20,0)}):Play()
-        -- Teleport up near
-        task.wait(0.3)
-        hrp.CFrame = CFrame.new(target.Position + Vector3.new(0,100,0))
-        task.wait(0.3)
-        -- Fly over
-        local above = target.Position + Vector3.new(0,20,0)
-        local dist = (above - hrp.Position).Magnitude
-        TweenService:Create(hrp, TweenInfo.new(dist/250, Enum.EasingStyle.Linear), {CFrame = CFrame.new(above)}):Play()
-        -- Descend
-        task.wait(dist/250)
-        TweenService:Create(hrp, TweenInfo.new((hrp.Position - (target.Position+Vector3.new(0,3,0))).Magnitude/100, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {CFrame = CFrame.new(target.Position+Vector3.new(0,3,0))}):Play()
+local flyingEnabled = false
+local flightConnection = nil
+local flightRunning = false
+
+TeleportTab:CreateToggle({
+    Name = "Ruta Voladora en Bucle (reinicia al morir)",
+    CurrentValue = false,
+    Callback = function(value)
+        flyingEnabled = value
+
+        local function startFlying()
+            if flightRunning then return end -- Evitar múltiples vuelos
+            flightRunning = true
+
+            task.spawn(function()
+                local char = localPlayer.Character or localPlayer.CharacterAdded:Wait()
+                local hrp = char:WaitForChild("HumanoidRootPart")
+                local TweenService = game:GetService("TweenService")
+
+                local waypoints = {
+                    Vector3.new(-55.3, 99.3, 743.4),
+                    Vector3.new(-45.2, 108.1, 8669.0),
+                    Vector3.new(-44.1, -254.1, 8810.3),
+                    Vector3.new(-58.3, -326.6, 9497.8),
+                }
+
+                local speed = 300
+
+                local function flyTo(position)
+                    local distance = (hrp.Position - position).Magnitude
+                    local time = distance / speed
+                    local tween = TweenService:Create(hrp, TweenInfo.new(time, Enum.EasingStyle.Linear), {CFrame = CFrame.new(position)})
+                    tween:Play()
+                    tween.Completed:Wait()
+                end
+
+                for _, pos in ipairs(waypoints) do
+                    if not flyingEnabled then break end
+                    flyTo(pos)
+                end
+
+                flightRunning = false
+            end)
+        end
+
+        if flyingEnabled then
+            startFlying()
+
+            -- Reconectar si el jugador muere
+            if flightConnection then flightConnection:Disconnect() end
+            flightConnection = localPlayer.CharacterAdded:Connect(function()
+                if flyingEnabled then
+                    flightRunning = false -- resetear bandera
+                    task.wait(1)
+                    startFlying()
+                end
+            end)
+        else
+            -- Toggle OFF
+            if flightConnection then
+                flightConnection:Disconnect()
+                flightConnection = nil
+            end
+        end
     end,
 })
+
 
 -- ============================================================
 -- PLAYER TAB
@@ -226,17 +273,49 @@ CharacterTab:CreateInput({Name="ID de Accesorio", PlaceholderText="Pon el ID del
 -- SCRIPTS TAB
 -- ============================================================
 ScriptsTab:CreateButton({Name="Infinity yield", Callback=function()
+print("Infinity Yield Executed")
     loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
 end})
 
 ScriptsTab:CreateButton({Name="Dex", Callback=function()
+print("Dex Executed")
     loadstring(game:HttpGet("https://pastebin.com/raw/FeMbE4xS"))()
 end})
 
 ScriptsTab:CreateButton({Name="DeadRails", Callback=function()
+print("DeadRails Script Executed")
     loadstring(game:HttpGet("https://raw.githubusercontent.com/gumanba/Scripts/main/DeadRails"))()
 end})
 
+local Button = ScriptsTab:CreateButton({
+    Name = "RemoteSpy v3",
+    Callback = function()
+	print("RemoteSpy v3 Executed")
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/JaoExploiter/StellySpyV3/refs/heads/main/StellySpyV3.txt"))()
+    end,
+})
+
+local Button = ScriptsTab:CreateButton({
+    Name = "Blox Fruits Script",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/realredz/BloxFruits/refs/heads/main/Source.lua"))()
+    end,
+})
+
+local Button = ScriptsTab:CreateButton({
+    Name = "Fisch Script",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/IdiotHubz/Scripts/refs/heads/main/Fisch/SpaceHub.lua"))()
+    end,
+})
+
+local Button = ScriptsTab:CreateButton({
+    Name = "C00lkidd GUI",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/ShutUpJamesTheLoser/C00lkiddgui/refs/heads/main/C00lkiddgui"))()
+
+    end,
+})
 -- ============================================================
 -- HERRAMIENTAS TAB
 -- ============================================================
@@ -486,4 +565,130 @@ TrolearTab:CreateToggle({
     end,
 })
 
+MiscTab:CreateToggle({
+	Name = "📍 Mostrar posición actual",
+	CurrentValue = false,
+	Callback = function(Value)
+		local player = game.Players.LocalPlayer
+		local RunService = game:GetService("RunService")
+		local guiName = "PosicionGUI"
+		local connection
+
+		if Value then
+			-- Crear GUI y TextLabel si no existe
+			local gui = player:FindFirstChild("PlayerGui"):FindFirstChild(guiName)
+			if not gui then
+				gui = Instance.new("ScreenGui")
+				gui.Name = guiName
+				gui.ResetOnSpawn = false
+				gui.Parent = player:WaitForChild("PlayerGui")
+			end
+
+			local label = gui:FindFirstChild("PosLabel")
+			if not label then
+				label = Instance.new("TextLabel")
+				label.Name = "PosLabel"
+				label.Size = UDim2.new(0, 300, 0, 30)
+				label.Position = UDim2.new(0, 10, 0, 10)
+				label.BackgroundColor3 = Color3.new(0, 0, 0)
+				label.BackgroundTransparency = 0.3
+				label.TextColor3 = Color3.new(1, 1, 1)
+				label.TextScaled = true
+				label.Font = Enum.Font.SourceSansBold
+				label.Text = "Posición: "
+				label.Parent = gui
+			end
+
+			label.Visible = true
+
+			-- Iniciar actualizador de posición
+			connection = RunService.RenderStepped:Connect(function()
+				if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+					local pos = player.Character.HumanoidRootPart.Position
+					label.Text = string.format("Posición: (%.1f, %.1f, %.1f)", pos.X, pos.Y, pos.Z)
+				end
+			end)
+
+			-- Guardar la conexión para desconectar luego
+			gui:SetAttribute("UpdaterConnection", connection)
+		else
+			local gui = player:FindFirstChild("PlayerGui"):FindFirstChild(guiName)
+			if gui then
+				local label = gui:FindFirstChild("PosLabel")
+				if label then label:Destroy() end
+
+				local conn = gui:GetAttribute("UpdaterConnection")
+				if conn then
+					pcall(function() conn:Disconnect() end)
+				end
+
+				gui:Destroy()
+			end
+		end
+	end,
+})
+
+MiscTab:CreateToggle({
+	Name = "💨 Mostrar velocidad actual",
+	CurrentValue = false,
+	Callback = function(Value)
+		local player = game.Players.LocalPlayer
+		local RunService = game:GetService("RunService")
+		local guiName = "VelocidadGUI"
+		local connection
+
+		if Value then
+			local gui = player.PlayerGui:FindFirstChild(guiName)
+			if not gui then
+				gui = Instance.new("ScreenGui")
+				gui.Name = guiName
+				gui.ResetOnSpawn = false
+				gui.Parent = player.PlayerGui
+			end
+
+			local label = gui:FindFirstChild("VelocidadLabel")
+			if not label then
+				label = Instance.new("TextLabel")
+				label.Name = "VelocidadLabel"
+				label.Size = UDim2.new(0, 300, 0, 30)
+				label.Position = UDim2.new(0, 10, 0, 50)
+				label.BackgroundColor3 = Color3.new(0, 0, 0)
+				label.BackgroundTransparency = 0.3
+				label.TextColor3 = Color3.new(1, 1, 1)
+				label.TextScaled = true
+				label.Font = Enum.Font.SourceSansBold
+				label.Text = "Velocidad: "
+				label.Parent = gui
+			end
+
+			label.Visible = true
+
+			connection = RunService.RenderStepped:Connect(function()
+				local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+				if hrp then
+					local speed = hrp.Velocity.Magnitude
+					label.Text = string.format("Velocidad: %.1f", speed)
+				end
+			end)
+
+			gui:SetAttribute("SpeedConnection", connection)
+		else
+			local gui = player.PlayerGui:FindFirstChild(guiName)
+			if gui then
+				local label = gui:FindFirstChild("VelocidadLabel")
+				if label then label:Destroy() end
+
+				local conn = gui:GetAttribute("SpeedConnection")
+				if conn then
+					pcall(function() conn:Disconnect() end)
+				end
+
+				gui:Destroy()
+			end
+		end
+	end,
+})
+
+
+-- End of WeroHub Script
 -- End of WeroHub Script
