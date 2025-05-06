@@ -159,7 +159,7 @@ TeleportTab:CreateToggle({
                     Vector3.new(-45.2, 108.1, 8669.0),
                     Vector3.new(-44.1, -254.1, 8810.3),
                     Vector3.new(-55.9, -356.3, 9441.7),
-                    Vector3.new(-58,-360.1,9498.2),
+                    Vector3.new(-56.1, 360.4, 9482.8),
                 }
 
                 local speed = 450
