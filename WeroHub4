@@ -161,7 +161,7 @@ TeleportTab:CreateToggle({
                     Vector3.new(-58.3, -326.6, 9497.8),
                 }
 
-                local speed = 400
+                local speed = 450
 
                 local function flyTo(position, isFinal)
                     local distance = (hrp.Position - position).Magnitude
