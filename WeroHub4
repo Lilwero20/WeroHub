@@ -156,7 +156,7 @@ TeleportTab:CreateToggle({
 
                 local waypoints = {
                     Vector3.new(-55.3, 99.3, 743.4),
-                    Vector3.new(-45.2, 108.1, 8669.0),
+                    Vector3.new(-23.9, 78.6, 8653),
                     Vector3.new(-44.1, -254.1, 8810.3),
                     Vector3.new(-55.9, -356.3, 9441.7),
                     Vector3.new(-58,-360.1,9498.2),
