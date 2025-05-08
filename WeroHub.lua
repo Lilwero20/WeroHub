@@ -555,7 +555,7 @@ end
 local AntiAFK_Connection
 
 -- Toggle Anti AFK en Rayfield
-TrolearTab:CreateToggle({
+MiscTab:CreateToggle({
     Name = "🛡️ Anti AFK",
     CurrentValue = false,
     Callback = function(Value)
@@ -700,6 +700,71 @@ MiscTab:CreateToggle({
 	end,
 })
 
+MiscTab:CreateToggle({
+    Name = "🕒 Mostrar hora actual en México",
+    CurrentValue = false,
+    Callback = function(Value)
+        local player = game.Players.LocalPlayer
+        local RunService = game:GetService("RunService")
+        local guiName = "HoraMexicoGUI"
+        local connection
 
--- End of WeroHub Script
+        if Value then
+            -- Crear GUI y TextLabel si no existe
+            local gui = player:FindFirstChild("PlayerGui"):FindFirstChild(guiName)
+            if not gui then
+                gui = Instance.new("ScreenGui")
+                gui.Name = guiName
+                gui.ResetOnSpawn = false
+                gui.Parent = player:WaitForChild("PlayerGui")
+            end
+
+            local label = gui:FindFirstChild("HoraLabel")
+            if not label then
+                label = Instance.new("TextLabel")
+                label.Name = "HoraLabel"
+                label.Size = UDim2.new(0, 300, 0, 30)
+                label.Position = UDim2.new(0, 10, 0, 10)
+                label.BackgroundColor3 = Color3.new(0, 0, 0)
+                label.BackgroundTransparency = 0.3
+                label.TextColor3 = Color3.new(1, 1, 1)
+                label.TextScaled = true
+                label.Font = Enum.Font.SourceSansBold
+                label.Text = "Hora de México: "
+                label.Parent = gui
+            end
+
+            label.Visible = true
+
+            -- Iniciar actualizador de hora
+            connection = RunService.RenderStepped:Connect(function()
+                local currentTime = os.date("!*t", os.time()) -- Obtiene hora UTC
+                -- Convertir la hora UTC a hora de México (zona horaria UTC -6)
+                currentTime.hour = currentTime.hour - 6
+                if currentTime.hour < 0 then
+                    currentTime.hour = currentTime.hour + 24
+                end
+                label.Text = string.format("Hora de México: %02d:%02d:%02d", currentTime.hour, currentTime.min, currentTime.sec)
+            end)
+
+            -- Guardar la conexión para desconectar luego
+            gui:SetAttribute("TimeConnection", connection)
+        else
+            local gui = player:FindFirstChild("PlayerGui"):FindFirstChild(guiName)
+            if gui then
+                local label = gui:FindFirstChild("HoraLabel")
+                if label then label:Destroy() end
+
+                local conn = gui:GetAttribute("TimeConnection")
+                if conn then
+                    pcall(function() conn:Disconnect() end)
+                end
+
+                gui:Destroy()
+            end
+        end
+    end,
+})
+
+
 -- End of WeroHub Script
