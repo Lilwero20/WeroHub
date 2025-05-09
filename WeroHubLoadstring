@@ -1,1 +1,1 @@
-loadstring(game:HttpGet('https://raw.githubusercontent.com/Lilwero20/WeroHub/refs/heads/main/WeroHub4'))()
+loadstring(game:HttpGet('https://raw.githubusercontent.com/Lilwero20/WeroHub/refs/heads/main/WeroHub.lua'))()
