@@ -298,7 +298,7 @@ end})
 
 ScriptsTab:CreateButton({Name="DeadRails", Callback=function()
 print("DeadRails Script Executed")
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/gumanba/Scripts/main/DeadRails"))()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/thantzy/thanhub/refs/heads/main/thanv1"))()
 end})
 
 local Button = ScriptsTab:CreateButton({
