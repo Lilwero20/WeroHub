@@ -298,7 +298,17 @@ end})
 
 ScriptsTab:CreateButton({Name="DeadRails", Callback=function()
 print("DeadRails Script Executed")
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/thantzy/thanhub/refs/heads/main/thanv1"))()
+    loadstring(game:HttpGet("loadstring(game:HttpGet("https://raw.githubusercontent.com/thantzy/thanhub/refs/heads/main/thanv1"))()
+end})
+
+ScriptsTab:CreateButton({Name="DeadRails2", Callback=function()
+print("DeadRails Script Executed")
+    loadstring(game:HttpGet("https://getnative.cc/script/loader"))()
+end})
+
+ScriptsTab:CreateButton({Name="DeadRails3", Callback=function()
+print("DeadRails Script Executed")
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/gumanba/Scripts/main/DeadRails"))()
 end})
 
 local Button = ScriptsTab:CreateButton({
