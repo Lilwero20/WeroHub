@@ -286,6 +286,16 @@ CharacterTab:CreateInput({Name="ID de Accesorio", PlaceholderText="Pon el ID del
 -- ============================================================
 -- SCRIPTS TAB
 -- ============================================================
+ScriptsTab:CreateButton({Name="Steal a Brainrot", Callback=function()
+print("Steal a Brainrot Script Executed")
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/Akbar123s/Script-Roblox-/refs/heads/main/nabaruBrainrot"))()
+end})
+
+ScriptsTab:CreateButton({Name="Grow a Garden", Callback=function()
+print("Grow a Garden Script Executed")
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/ArdyBotzz/NatHub/refs/heads/master/NatHub.lua"))()
+end})
+
 ScriptsTab:CreateButton({Name="Infinity yield", Callback=function()
 print("Infinity Yield Executed")
     loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
@@ -322,7 +332,7 @@ local Button = ScriptsTab:CreateButton({
 local Button = ScriptsTab:CreateButton({
     Name = "Blox Fruits Script",
     Callback = function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/realredz/BloxFruits/refs/heads/main/Source.lua"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/tlredz/Scripts/refs/heads/main/main.luau"))()
     end,
 })
 
