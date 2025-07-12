@@ -293,7 +293,7 @@ end})
 
 ScriptsTab:CreateButton({Name="Steal a Brainrot", Callback=function()
 print("Steal a Brainrot Script Executed")
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/egor2078f/lurkhackv4/refs/heads/main/main.lua,true"))()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/egor2078f/lurkhackv4/refs/heads/main/main.lua"))()
 end})
 
 ScriptsTab:CreateButton({Name="Grow a Garden", Callback=function()
