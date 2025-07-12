@@ -156,9 +156,9 @@ TeleportTab:CreateToggle({
 
                 local waypoints = {
                     Vector3.new(-55.3, 99.3, 743.4),
-					Vector3.new(-63.9, 97.4, 2592.5),
-					Vector3.new(-53.8, 113, 4329.7),
-					Vector3.new(-68.7, 92.9, 5842.8),
+		    Vector3.new(-63.9, 97.4, 2592.5),
+		    Vector3.new(-53.8, 113, 4329.7),
+		    Vector3.new(-68.7, 92.9, 5842.8),
                     Vector3.new(-45.2, 108.1, 8669.0),
                     Vector3.new(-44.1, -254.1, 8810.3),
                     Vector3.new(-55.9, -356.3, 9441.7),
@@ -294,6 +294,16 @@ end})
 ScriptsTab:CreateButton({Name="Steal a Brainrot", Callback=function()
 print("Steal a Brainrot Script Executed")
     loadstring(game:HttpGet("https://raw.githubusercontent.com/egor2078f/lurkhackv4/refs/heads/main/main.lua"))()
+end})
+
+ScriptsTab:CreateButton({Name="Grow a Garden AutoMiddle Pets", Callback=function()
+print("Grow a Garden Script Executed")
+    loadstring(game:HttpGet(('https://raw.githubusercontent.com/FakeModz/LimitHub/refs/heads/main/LimitHub_Loader.lua')))()
+end})
+
+ScriptsTab:CreateButton({Name="Grow a Garden Inf Sprinkler", Callback=function()
+print("Grow a Garden Script Executed")
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/AhmadV99/Speed-Hub-X/main/Speed%20Hub%20X.lua", true))()
 end})
 
 ScriptsTab:CreateButton({Name="Grow a Garden", Callback=function()
