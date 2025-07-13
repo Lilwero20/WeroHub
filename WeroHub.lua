@@ -298,12 +298,7 @@ end})
 
 ScriptsTab:CreateButton({Name="Grow a Garden AutoMiddle Pets", Callback=function()
 print("Grow a Garden Script Executed")
-    loadstring(game:HttpGet(('https://raw.githubusercontent.com/FakeModz/LimitHub/refs/heads/main/LimitHub_Loader.lua')))()
-end})
-
-ScriptsTab:CreateButton({Name="Grow a Garden PetSpawner", Callback=function()
-print("Grow a Garden Script Executed")
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/iwantsom3/script/refs/heads/main/Gag"))()
+    loadstring(game:HttpGet(('https://raw.githubusercontent.com/FakeModz/LimitHub/refs/heads/main/LimitHub_Luarmor_E.lua')))()
 end})
 
 ScriptsTab:CreateButton({Name="Grow a Garden Inf Sprinkler", Callback=function()
