@@ -293,6 +293,12 @@ end})
 
 ScriptsTab:CreateButton({Name="Steal a Brainrot", Callback=function()
 print("Steal a Brainrot Script Executed")
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/Youifpg/Steal-a-Brianrot/refs/heads/main/Slowversion.lua"))()
+end})
+
+
+ScriptsTab:CreateButton({Name="Steal a Brainrot Key:LurkHack2025", Callback=function()
+print("Steal a Brainrot Script Executed")
     loadstring(game:HttpGet("https://raw.githubusercontent.com/egor2078f/lurkhackv4/refs/heads/main/main.lua"))()
 end})
 
