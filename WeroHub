@@ -112,7 +112,7 @@ TweenService:Create(frame, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.Easing
 local function executeScript()
 	statusLabel.Text = "✅ Executing Script..."
 	task.wait(1)
-	loadstring(game:HttpGet("https://raw.githubusercontent.com/Lilwero20/WeroHub/refs/heads/main/WeroHub.lua"))()
+	loadstring(game:HttpGet("https://raw.githubusercontent.com/Lilwero20/WeroHub/main/WeroHub.lua"))()
 	screenGui:Destroy()
 end
 
