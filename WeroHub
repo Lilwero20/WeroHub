@@ -1,19 +1,24 @@
+local TweenService = game:GetService("TweenService")
 local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
+-- Crear GUI principal
 local screenGui = Instance.new("ScreenGui", playerGui)
 screenGui.Name = "KeySystem"
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.ResetOnSpawn = false
 
+-- Frame contenedor
 local frame = Instance.new("Frame", screenGui)
 frame.Size = UDim2.new(0, 320, 0, 260)
-frame.Position = UDim2.new(0.5, -160, 0.5, -130)
+frame.Position = UDim2.new(0.5, -160, 0.5, 400) -- Empieza abajo para animación
 frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.BackgroundTransparency = 1
 frame.BorderSizePixel = 0
 
 Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 16)
 
+-- Sombra
 local shadow = Instance.new("ImageLabel", frame)
 shadow.Image = "rbxassetid://1316045217"
 shadow.ImageTransparency = 0.6
@@ -22,6 +27,7 @@ shadow.Position = UDim2.new(0, -20, 0, -20)
 shadow.BackgroundTransparency = 1
 shadow.ZIndex = -1
 
+-- Título
 local title = Instance.new("TextLabel", frame)
 title.Text = "🔐 Key System"
 title.Font = Enum.Font.GothamBold
@@ -30,6 +36,7 @@ title.Size = UDim2.new(1, 0, 0, 40)
 title.BackgroundTransparency = 1
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 
+-- TextBox
 local textbox = Instance.new("TextBox", frame)
 textbox.PlaceholderText = "Enter your key..."
 textbox.Font = Enum.Font.Gotham
@@ -41,6 +48,7 @@ textbox.TextColor3 = Color3.fromRGB(255, 255, 255)
 textbox.ClearTextOnFocus = false
 Instance.new("UICorner", textbox).CornerRadius = UDim.new(0, 12)
 
+-- Botón Check Key
 local checkButton = Instance.new("TextButton", frame)
 checkButton.Text = "✔ Check Key"
 checkButton.Font = Enum.Font.GothamSemibold
@@ -51,6 +59,7 @@ checkButton.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
 checkButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 Instance.new("UICorner", checkButton).CornerRadius = UDim.new(0, 12)
 
+-- Botón Get Key
 local getKeyButton = Instance.new("TextButton", frame)
 getKeyButton.Text = "🔑 Get Key"
 getKeyButton.Font = Enum.Font.GothamSemibold
@@ -61,6 +70,7 @@ getKeyButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
 getKeyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 Instance.new("UICorner", getKeyButton).CornerRadius = UDim.new(0, 12)
 
+-- Texto de estado
 local statusLabel = Instance.new("TextLabel", frame)
 statusLabel.Text = ""
 statusLabel.Font = Enum.Font.Gotham
@@ -70,6 +80,7 @@ statusLabel.Position = UDim2.new(0, 0, 0.83, 0)
 statusLabel.BackgroundTransparency = 1
 statusLabel.TextColor3 = Color3.fromRGB(0, 255, 128)
 
+-- Botón Cerrar
 local closeButton = Instance.new("TextButton", frame)
 closeButton.Text = "✖"
 closeButton.Font = Enum.Font.GothamBold
@@ -80,6 +91,7 @@ closeButton.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
 closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 Instance.new("UICorner", closeButton).CornerRadius = UDim.new(1, 0)
 
+-- Función copiar al portapapeles
 local function copyToClipboard(text)
 	if setclipboard then
 		setclipboard(text)
@@ -90,22 +102,30 @@ local function copyToClipboard(text)
 	end
 end
 
+-- Mostrar GUI con animación
+TweenService:Create(frame, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+	Position = UDim2.new(0.5, -160, 0.5, -130),
+	BackgroundTransparency = 0
+}):Play()
+
+-- Ejecutar script
 local function executeScript()
 	statusLabel.Text = "✅ Executing Script..."
 	task.wait(1)
-	loadstring(game:HttpGet("https://raw.githubusercontent.com/Lilwero20/WeroHub/refs/heads/main/WeroHub"))()
+	loadstring(game:HttpGet("https://raw.githubusercontent.com/Lilwero20/WeroHub/refs/heads/main/WeroHub.lua"))()
 	screenGui:Destroy()
 end
 
+-- Validación
 checkButton.MouseButton1Click:Connect(function()
-	local text = textbox.Text
-	if text == "Kshg74788UIy7778SD" then
+	if textbox.Text == "Kshg74788UIy7778SD" then
 		executeScript()
 	else
 		statusLabel.Text = "❌ Invalid Key"
 	end
 end)
 
+-- Copiar Key
 getKeyButton.MouseButton1Click:Connect(function()
 	copyToClipboard("https://lootdest.org/s?BNTs8pSe")
 	getKeyButton.Text = "✅ Copied!"
@@ -113,16 +133,13 @@ getKeyButton.MouseButton1Click:Connect(function()
 	getKeyButton.Text = "🔑 Get Key"
 end)
 
+-- Animación al cerrar
 closeButton.MouseButton1Click:Connect(function()
+	local tweenOut = TweenService:Create(frame, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+		Position = UDim2.new(0.5, -160, 0.5, 400),
+		BackgroundTransparency = 1
+	})
+	tweenOut:Play()
+	tweenOut.Completed:Wait()
 	screenGui:Destroy()
 end)
-
--- 🔍 Verifica si el usuario puso directamente: key:"ELKEY" loadstring(...)
-task.wait(0.5) -- Espera breve para asegurar carga de GUI
-local inputText = textbox.Text
-if string.match(inputText, '^key:"(.-)"%s+loadstring') then
-	local keyMatch = string.match(inputText, '^key:"(.-)"')
-	if keyMatch == "Kshg74788UIy7778SD" then
-		executeScript()
-	end
-end
