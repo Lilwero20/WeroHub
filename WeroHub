@@ -1,26 +1,16 @@
+-- Solo ejecuta si no tiene la key validada
+if shared.KeyValidated == true then
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/Lilwero20/WeroHub/main/WeroHub.lua"))()
+    return
+end
+
+-- A partir de aquí, crea la interfaz y todo lo demás
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- DataStore para guardar si ya ingresó la key
-local keyStore = DataStoreService:GetDataStore("KeySystemStore")
-local KEY_VALUE = "WERO-2J3K9V81FALM"
-local SCRIPT_URL = "https://raw.githubusercontent.com/Lilwero20/WeroHub/main/WeroHub.lua"
-
--- Verifica si el jugador ya tiene la key validada
-local success, savedKey = pcall(function()
-	return keyStore:GetAsync(player.UserId)
-end)
-
-if success and savedKey == true then
-	loadstring(game:HttpGet(SCRIPT_URL))()
-	return
-end
-
--- Crear GUI principal
 local screenGui = Instance.new("ScreenGui", playerGui)
 screenGui.Name = "KeySystem"
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -42,7 +32,7 @@ galaxyBG.Image = "rbxassetid://16948400568"
 galaxyBG.BackgroundTransparency = 1
 galaxyBG.ZIndex = 0
 
--- Función para crear una estrella que cae
+-- Partículas de estrellas
 local function createFallingStar()
 	local star = Instance.new("ImageLabel", frame)
 	star.Size = UDim2.new(0, 4, 0, 4)
@@ -62,7 +52,6 @@ local function createFallingStar()
 	tween.Completed:Connect(function() star:Destroy() end)
 end
 
--- Spawner de estrellas
 task.spawn(function()
 	while frame.Parent do
 		createFallingStar()
@@ -70,21 +59,15 @@ task.spawn(function()
 	end
 end)
 
--- Elementos UI
-local function createTextLabel(text, size, yPos)
-	local label = Instance.new("TextLabel", frame)
-	label.Text = text
-	label.Font = Enum.Font.GothamBold
-	label.TextSize = size
-	label.Size = UDim2.new(1, 0, 0, 40)
-	label.Position = UDim2.new(0, 0, yPos, 0)
-	label.BackgroundTransparency = 1
-	label.TextColor3 = Color3.fromRGB(255, 255, 255)
-	label.ZIndex = 2
-	return label
-end
-
-local title = createTextLabel("🌌 WeroHub Key System", 20, 0)
+-- UI Elements
+local title = Instance.new("TextLabel", frame)
+title.Text = "🌌 WeroHub Key System"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 20
+title.Size = UDim2.new(1, 0, 0, 40)
+title.BackgroundTransparency = 1
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.ZIndex = 2
 
 local textbox = Instance.new("TextBox", frame)
 textbox.PlaceholderText = "Enter your key..."
@@ -142,29 +125,23 @@ closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 closeButton.ZIndex = 2
 Instance.new("UICorner", closeButton).CornerRadius = UDim.new(1, 0)
 
--- Animación de entrada
+-- Mostrar animación
 TweenService:Create(frame, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 	Position = UDim2.new(0.5, -160, 0.5, -130),
 	BackgroundTransparency = 0
 }):Play()
 
--- Funciones
-local function copyToClipboard(text)
-	if setclipboard then setclipboard(text) elseif toclipboard then toclipboard(text) end
-end
-
+-- Acciones
 local function executeScript()
 	statusLabel.Text = "✅ Executing Script..."
 	task.wait(1)
-	pcall(function()
-		keyStore:SetAsync(player.UserId, true)
-	end)
-	loadstring(game:HttpGet(SCRIPT_URL))()
+	shared.KeyValidated = true
+	loadstring(game:HttpGet("https://raw.githubusercontent.com/Lilwero20/WeroHub/main/WeroHub.lua"))()
 	screenGui:Destroy()
 end
 
 checkButton.MouseButton1Click:Connect(function()
-	if textbox.Text == KEY_VALUE then
+	if textbox.Text == "WERO-2J3K9V81FALM" then
 		executeScript()
 	else
 		statusLabel.Text = "❌ Invalid Key"
@@ -177,7 +154,7 @@ checkButton.MouseButton1Click:Connect(function()
 end)
 
 getKeyButton.MouseButton1Click:Connect(function()
-	copyToClipboard("https://loot-link.com/s?thBf8Ik1")
+	if setclipboard then setclipboard("https://loot-link.com/s?thBf8Ik1") end
 	getKeyButton.Text = "✅ Copied!"
 	task.wait(1.5)
 	getKeyButton.Text = "🔑 Get Key"
@@ -193,7 +170,7 @@ closeButton.MouseButton1Click:Connect(function()
 	screenGui:Destroy()
 end)
 
--- Sistema de mover la ventana
+-- Mover ventana
 local dragging, dragInput, dragStart, startPos
 frame.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -217,3 +194,4 @@ UserInputService.InputChanged:Connect(function(input)
 			startPos.Y.Scale, startPos.Y.Offset + delta.Y)
 	end
 end)
+
