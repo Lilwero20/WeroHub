@@ -7,33 +7,55 @@ local screenGui = Instance.new("ScreenGui", playerGui)
 screenGui.Name = "KeySystem"
 
 local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0, 300, 0, 180)
-frame.Position = UDim2.new(0.5, -150, 0.5, -90)
+frame.Size = UDim2.new(0, 300, 0, 220)
+frame.Position = UDim2.new(0.5, -150, 0.5, -110)
 frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 frame.BorderSizePixel = 0
 
+-- TextBox
 local textbox = Instance.new("TextBox", frame)
 textbox.PlaceholderText = "Enter Key"
 textbox.Size = UDim2.new(0.8, 0, 0, 30)
-textbox.Position = UDim2.new(0.1, 0, 0.2, 0)
+textbox.Position = UDim2.new(0.1, 0, 0.15, 0)
 textbox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 textbox.TextColor3 = Color3.new(1, 1, 1)
+textbox.ClearTextOnFocus = false
 
+-- Botón Check Key
 local checkButton = Instance.new("TextButton", frame)
 checkButton.Text = "Check Key"
 checkButton.Size = UDim2.new(0.8, 0, 0, 30)
-checkButton.Position = UDim2.new(0.1, 0, 0.5, 0)
+checkButton.Position = UDim2.new(0.1, 0, 0.4, 0)
 checkButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 checkButton.TextColor3 = Color3.new(1, 1, 1)
 
+-- Botón Get Key
 local getKeyButton = Instance.new("TextButton", frame)
 getKeyButton.Text = "Get Key"
 getKeyButton.Size = UDim2.new(0.8, 0, 0, 30)
-getKeyButton.Position = UDim2.new(0.1, 0, 0.75, 0)
+getKeyButton.Position = UDim2.new(0.1, 0, 0.6, 0)
 getKeyButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 getKeyButton.TextColor3 = Color3.new(1, 1, 1)
 
--- Función para copiar al portapapeles (solo funciona en Studio)
+-- Texto de estado
+local statusLabel = Instance.new("TextLabel", frame)
+statusLabel.Size = UDim2.new(1, 0, 0, 20)
+statusLabel.Position = UDim2.new(0, 0, 0.8, 0)
+statusLabel.BackgroundTransparency = 1
+statusLabel.TextColor3 = Color3.new(0, 1, 0)
+statusLabel.Text = ""
+statusLabel.Font = Enum.Font.SourceSans
+statusLabel.TextSize = 18
+
+-- Botón cerrar
+local closeButton = Instance.new("TextButton", frame)
+closeButton.Text = "X"
+closeButton.Size = UDim2.new(0, 30, 0, 30)
+closeButton.Position = UDim2.new(1, -35, 0, 5)
+closeButton.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+closeButton.TextColor3 = Color3.new(1, 1, 1)
+
+-- Función para copiar al portapapeles (solo en Studio/executor)
 local function copyToClipboard(text)
     if setclipboard then
         setclipboard(text)
@@ -47,11 +69,13 @@ end
 -- Comprobación del código
 checkButton.MouseButton1Click:Connect(function()
     if textbox.Text == "Kshg74788UIy7778SD" then
-        -- Ejecutar el script si la key es correcta
+        statusLabel.Text = "Executing Script..."
+        task.wait(1) -- breve espera para mostrar mensaje antes de ejecutar
         loadstring(game:HttpGet("https://raw.githubusercontent.com/Lilwero20/WeroHub/refs/heads/main/WeroHub.lua"))()
         screenGui:Destroy()
     else
         textbox.Text = "Invalid Key"
+        statusLabel.Text = ""
     end
 end)
 
@@ -61,4 +85,9 @@ getKeyButton.MouseButton1Click:Connect(function()
     getKeyButton.Text = "Copied!"
     task.wait(1.5)
     getKeyButton.Text = "Get Key"
+end)
+
+-- Cerrar GUI
+closeButton.MouseButton1Click:Connect(function()
+    screenGui:Destroy()
 end)
