@@ -1,93 +1,136 @@
--- UI Elements
 local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Crear GUI
+-- Crear GUI principal
 local screenGui = Instance.new("ScreenGui", playerGui)
 screenGui.Name = "KeySystem"
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.ResetOnSpawn = false
 
+-- Frame contenedor
 local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0, 300, 0, 220)
-frame.Position = UDim2.new(0.5, -150, 0.5, -110)
-frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+frame.Size = UDim2.new(0, 320, 0, 260)
+frame.Position = UDim2.new(0.5, -160, 0.5, -130)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.BackgroundTransparency = 0
 frame.BorderSizePixel = 0
 
--- TextBox
+local frameCorner = Instance.new("UICorner", frame)
+frameCorner.CornerRadius = UDim.new(0, 16)
+
+-- Sombra
+local shadow = Instance.new("ImageLabel", frame)
+shadow.Image = "rbxassetid://1316045217"
+shadow.ImageTransparency = 0.6
+shadow.Size = UDim2.new(1, 40, 1, 40)
+shadow.Position = UDim2.new(0, -20, 0, -20)
+shadow.BackgroundTransparency = 1
+shadow.ZIndex = -1
+
+-- Título
+local title = Instance.new("TextLabel", frame)
+title.Text = "🔐 Key System"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 20
+title.Size = UDim2.new(1, 0, 0, 40)
+title.BackgroundTransparency = 1
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+-- TextBox (ingreso de clave)
 local textbox = Instance.new("TextBox", frame)
-textbox.PlaceholderText = "Enter Key"
-textbox.Size = UDim2.new(0.8, 0, 0, 30)
-textbox.Position = UDim2.new(0.1, 0, 0.15, 0)
-textbox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-textbox.TextColor3 = Color3.new(1, 1, 1)
+textbox.PlaceholderText = "Enter your key..."
+textbox.Font = Enum.Font.Gotham
+textbox.TextSize = 16
+textbox.Size = UDim2.new(0.85, 0, 0, 36)
+textbox.Position = UDim2.new(0.075, 0, 0.25, 0)
+textbox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+textbox.TextColor3 = Color3.fromRGB(255, 255, 255)
 textbox.ClearTextOnFocus = false
+
+local textboxCorner = Instance.new("UICorner", textbox)
+textboxCorner.CornerRadius = UDim.new(0, 12)
 
 -- Botón Check Key
 local checkButton = Instance.new("TextButton", frame)
-checkButton.Text = "Check Key"
-checkButton.Size = UDim2.new(0.8, 0, 0, 30)
-checkButton.Position = UDim2.new(0.1, 0, 0.4, 0)
-checkButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-checkButton.TextColor3 = Color3.new(1, 1, 1)
+checkButton.Text = "✔ Check Key"
+checkButton.Font = Enum.Font.GothamSemibold
+checkButton.TextSize = 16
+checkButton.Size = UDim2.new(0.85, 0, 0, 36)
+checkButton.Position = UDim2.new(0.075, 0, 0.45, 0)
+checkButton.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
+checkButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+local checkCorner = Instance.new("UICorner", checkButton)
+checkCorner.CornerRadius = UDim.new(0, 12)
 
 -- Botón Get Key
 local getKeyButton = Instance.new("TextButton", frame)
-getKeyButton.Text = "Get Key"
-getKeyButton.Size = UDim2.new(0.8, 0, 0, 30)
-getKeyButton.Position = UDim2.new(0.1, 0, 0.6, 0)
-getKeyButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-getKeyButton.TextColor3 = Color3.new(1, 1, 1)
+getKeyButton.Text = "🔑 Get Key"
+getKeyButton.Font = Enum.Font.GothamSemibold
+getKeyButton.TextSize = 16
+getKeyButton.Size = UDim2.new(0.85, 0, 0, 36)
+getKeyButton.Position = UDim2.new(0.075, 0, 0.63, 0)
+getKeyButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+getKeyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+local getCorner = Instance.new("UICorner", getKeyButton)
+getCorner.CornerRadius = UDim.new(0, 12)
 
 -- Texto de estado
 local statusLabel = Instance.new("TextLabel", frame)
-statusLabel.Size = UDim2.new(1, 0, 0, 20)
-statusLabel.Position = UDim2.new(0, 0, 0.8, 0)
-statusLabel.BackgroundTransparency = 1
-statusLabel.TextColor3 = Color3.new(0, 1, 0)
 statusLabel.Text = ""
-statusLabel.Font = Enum.Font.SourceSans
-statusLabel.TextSize = 18
+statusLabel.Font = Enum.Font.Gotham
+statusLabel.TextSize = 14
+statusLabel.Size = UDim2.new(1, 0, 0, 30)
+statusLabel.Position = UDim2.new(0, 0, 0.83, 0)
+statusLabel.BackgroundTransparency = 1
+statusLabel.TextColor3 = Color3.fromRGB(0, 255, 128)
 
--- Botón cerrar
+-- Botón Cerrar
 local closeButton = Instance.new("TextButton", frame)
-closeButton.Text = "X"
+closeButton.Text = "✖"
+closeButton.Font = Enum.Font.GothamBold
+closeButton.TextSize = 18
 closeButton.Size = UDim2.new(0, 30, 0, 30)
 closeButton.Position = UDim2.new(1, -35, 0, 5)
 closeButton.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-closeButton.TextColor3 = Color3.new(1, 1, 1)
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 
--- Función para copiar al portapapeles (solo en Studio/executor)
+local closeCorner = Instance.new("UICorner", closeButton)
+closeCorner.CornerRadius = UDim.new(1, 0)
+
+-- Función copiar portapapeles
 local function copyToClipboard(text)
-    if setclipboard then
-        setclipboard(text)
-    elseif toclipboard then
-        toclipboard(text)
-    else
-        warn("Clipboard not supported on this executor")
-    end
+	if setclipboard then
+		setclipboard(text)
+	elseif toclipboard then
+		toclipboard(text)
+	else
+		warn("Clipboard not supported")
+	end
 end
 
--- Comprobación del código
+-- Validación
 checkButton.MouseButton1Click:Connect(function()
-    if textbox.Text == "Kshg74788UIy7778SD" then
-        statusLabel.Text = "Executing Script..."
-        task.wait(1) -- breve espera para mostrar mensaje antes de ejecutar
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/Lilwero20/WeroHub/refs/heads/main/WeroHub.lua"))()
-        screenGui:Destroy()
-    else
-        textbox.Text = "Invalid Key"
-        statusLabel.Text = ""
-    end
+	if textbox.Text == "Kshg74788UIy7778SD" then
+		statusLabel.Text = "✅ Executing Script..."
+		task.wait(1)
+		loadstring(game:HttpGet("https://raw.githubusercontent.com/Lilwero20/WeroHub/refs/heads/main/WeroHub.lua"))()
+		screenGui:Destroy()
+	else
+		statusLabel.Text = "❌ Invalid Key"
+	end
 end)
 
--- Copiar link al portapapeles
+-- Copiar link
 getKeyButton.MouseButton1Click:Connect(function()
-    copyToClipboard("https://lootdest.org/s?BNTs8pSe")
-    getKeyButton.Text = "Copied!"
-    task.wait(1.5)
-    getKeyButton.Text = "Get Key"
+	copyToClipboard("https://lootdest.org/s?BNTs8pSe")
+	getKeyButton.Text = "✅ Copied!"
+	task.wait(1.5)
+	getKeyButton.Text = "🔑 Get Key"
 end)
 
 -- Cerrar GUI
 closeButton.MouseButton1Click:Connect(function()
-    screenGui:Destroy()
+	screenGui:Destroy()
 end)
