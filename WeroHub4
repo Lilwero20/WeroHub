@@ -10,71 +10,65 @@ local humanoid = character:WaitForChild("Humanoid")
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
--- Variables para speed
+-- Variables
 local originalWalkSpeed = 34
 local boostedWalkSpeed = 60
 local speedToggle = false
+local speedBypassConnection = nil
 
--- Variables para auto punch
 local autoPunchToggle = false
+local antiRagdollToggle = false
 
--- Guardar spawn
 local spawnPos = hrp.Position
 
--- Crear ScreenGui para los botones (padre de los botones)
+-- Crear ScreenGui para botones
 local playerGui = player:WaitForChild("PlayerGui")
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "BypassButtonsGui"
-screenGui.ResetOnSpawn = false -- ¡Importante para que no desaparezca al morir!
+screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
--- Crear botón Fly to Spawn
-local flyButton = Instance.new("TextButton")
-flyButton.Size = UDim2.new(0, 160, 0, 40)
-flyButton.Position = UDim2.new(0.5, -80, 0.8, 0)
-flyButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-flyButton.TextColor3 = Color3.new(1,1,1)
-flyButton.Font = Enum.Font.GothamBold
-flyButton.TextSize = 18
-flyButton.Text = "Fly to Spawn"
-flyButton.Visible = false
-flyButton.Parent = screenGui
-
--- Crear botón Instant TP Up 80
-local instantTPButton = flyButton:Clone()
-instantTPButton.Position = UDim2.new(0.5, -80, 0.73, 0)
-instantTPButton.Text = "Instant TP Up 80"
-instantTPButton.Visible = false
-instantTPButton.Parent = screenGui
-
--- Crear botón Auto Punch
-local autoPunchButton = flyButton:Clone()
-autoPunchButton.Position = UDim2.new(0.5, -80, 0.66, 0)
-autoPunchButton.Text = "Auto Punch (Tung Bat)"
-autoPunchButton.Visible = false
-autoPunchButton.Parent = screenGui
-
--- Función para cambiar velocidad con bypass confiable
-local function setSpeed(speed)
-    if humanoid and humanoid.Parent then
-        humanoid.WalkSpeed = speed
-    end
+local function createButton(text, posY)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 160, 0, 40)
+    btn.Position = UDim2.new(0.5, -80, posY, 0)
+    btn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 18
+    btn.Text = text
+    btn.Visible = false
+    btn.Parent = screenGui
+    return btn
 end
 
--- Bypass Speed con corregir al morir
-local function onCharacterAdded(char)
-    character = char
-    hrp = character:WaitForChild("HumanoidRootPart")
-    humanoid = character:WaitForChild("Humanoid")
-    spawnPos = hrp.Position
-    if speedToggle then
-        setSpeed(boostedWalkSpeed)
+local flyButton = createButton("Fly to Spawn", 0.8)
+local instantTPButton = createButton("Instant TP Up 80", 0.73)
+local autoPunchButton = createButton("Auto Punch (Tung Bat)", 0.66)
+
+-- Función para cambiar velocidad con bypass (usando Heartbeat)
+local function setSpeedBypass(value)
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+
+    if value then
+        hum.WalkSpeed = boostedWalkSpeed
+        speedBypassConnection = RunService.Heartbeat:Connect(function()
+            pcall(function()
+                if hum and hum.WalkSpeed ~= boostedWalkSpeed then
+                    hum.WalkSpeed = boostedWalkSpeed
+                end
+            end)
+        end)
     else
-        setSpeed(originalWalkSpeed)
+        if speedBypassConnection then
+            speedBypassConnection:Disconnect()
+            speedBypassConnection = nil
+        end
+        hum.WalkSpeed = originalWalkSpeed
     end
 end
-
-player.CharacterAdded:Connect(onCharacterAdded)
 
 -- Función vuelo gradual Fly to Spawn
 local function flyToPosition(targetPos)
@@ -136,7 +130,6 @@ end
 local function instantTPUp()
     if not hrp or not hrp.Parent then return end
     local targetPos = hrp.Position + Vector3.new(0, 80, 0)
-    -- Usamos Tween y cambiamos CFrame para mejor bypass
     local tween = TweenService:Create(hrp, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = CFrame.new(targetPos)})
     tween:Play()
 end
@@ -152,11 +145,45 @@ local function autoPunch()
             local targetHRP = target.Character.HumanoidRootPart
             local targetHumanoid = target.Character.Humanoid
             if (hrp.Position - targetHRP.Position).Magnitude <= 9 and targetHumanoid.Health > 0 then
-                -- Activar swing de tool y pegar
                 tool:Activate()
-                task.wait(0.5) -- espera entre golpes
+                task.wait(0.5)
                 tool:Deactivate()
             end
+        end
+    end
+end
+
+-- Función Anti Ragdoll (quita estado ragdoll con BodyVelocity y resetear HipHeight)
+local ragdollConnection = nil
+local function setAntiRagdoll(state)
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hum or not hrp then return end
+
+    if state then
+        ragdollConnection = RunService.Heartbeat:Connect(function()
+            pcall(function()
+                -- Eliminar BodyVelocity/BodyGyro que pongan ragdoll (esto depende del juego)
+                for _, v in pairs(hrp:GetChildren()) do
+                    if v:IsA("BodyVelocity") or v:IsA("BodyGyro") then
+                        v:Destroy()
+                    end
+                end
+                -- Resetear HipHeight para que no se caiga (si el juego usa Humanoid HipHeight)
+                if hum.HipHeight ~= 2 then
+                    hum.HipHeight = 2
+                end
+                -- Forzar estado a PlatformStand false
+                if hum.PlatformStand then
+                    hum.PlatformStand = false
+                end
+            end)
+        end)
+    else
+        if ragdollConnection then
+            ragdollConnection:Disconnect()
+            ragdollConnection = nil
         end
     end
 end
@@ -165,7 +192,7 @@ end
 local Window = Rayfield:CreateWindow({
     Name = "WeroHub - Steal a Brainrot",
     LoadingTitle = "WeroHub",
-    LoadingSubtitle = "Speed & Teleport & Punch",
+    LoadingSubtitle = "Speed, Teleport, Punch & AntiRagdoll",
     ConfigurationSaving = {
        Enabled = true,
        FolderName = nil,
@@ -179,19 +206,15 @@ local Window = Rayfield:CreateWindow({
 
 local Tab = Window:CreateTab("Main")
 
--- Toggle Speed Bypass
+-- Toggle Speed Bypass con tu método
 Tab:CreateToggle({
-    Name = "Speed Bypass (60)",
+    Name = "Speed 60 Bypass",
     CurrentValue = false,
-    Flag = "SpeedToggle",
-    Callback = function(value)
-        speedToggle = value
-        if speedToggle then
-            setSpeed(boostedWalkSpeed)
-        else
-            setSpeed(originalWalkSpeed)
-        end
-    end
+    Flag = "Toggle1",
+    Callback = function(Value)
+        speedToggle = Value
+        setSpeedBypass(Value)
+    end,
 })
 
 -- Toggle para mostrar botón Fly to Spawn
@@ -231,6 +254,17 @@ Tab:CreateToggle({
     end
 })
 
+-- Toggle Anti Ragdoll
+Tab:CreateToggle({
+    Name = "Anti Ragdoll",
+    CurrentValue = false,
+    Flag = "AntiRagdollToggle",
+    Callback = function(value)
+        antiRagdollToggle = value
+        setAntiRagdoll(value)
+    end
+})
+
 -- Eventos botones
 flyButton.MouseButton1Click:Connect(function()
     flyToPosition(spawnPos)
@@ -258,8 +292,12 @@ player.CharacterAdded:Connect(function(char)
     spawnPos = hrp.Position
 
     if speedToggle then
-        setSpeed(boostedWalkSpeed)
+        setSpeedBypass(true)
     else
-        setSpeed(originalWalkSpeed)
+        setSpeedBypass(false)
+    end
+
+    if antiRagdollToggle then
+        setAntiRagdoll(true)
     end
 end)
