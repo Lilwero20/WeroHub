@@ -67,7 +67,6 @@ local Window = Rayfield:CreateWindow({
 })
 
 -- Tab Creation
-local StealTab = Window:CreateTab("Steal a Brainrot", 4483362458)
 local TeleportTab   = Window:CreateTab("Teleport", 4483362458)
 local PlayerTab     = Window:CreateTab("Player", 4483362458)
 local ScriptsTab    = Window:CreateTab("Scripts", 4483362458)
@@ -220,25 +219,21 @@ TeleportTab:CreateToggle({
 local StealTab = Window:CreateTab("Steal a Brainrot", 4483362458)
 
 local RunService = game:GetService("RunService")
-local speedBypassActive = false
-local speedBypassConnection
 local SPEED_VALUE = 50
+local speedBypassConnection
 
-StealTab:CreateToggle({
+local Toggle = Tab:CreateToggle({
     Name = "Speed 50 Bypass",
     CurrentValue = false,
-    Flag = "Speed50Bypass",
-    Callback = function(state)
-        local character = localPlayer.Character or localPlayer.CharacterAdded:Wait()
+    Flag = "Toggle1",
+    Callback = function(Value)
+        local character = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()
         local humanoid = character:FindFirstChildOfClass("Humanoid")
 
         if not humanoid then return end
 
-        if state then
-            speedBypassActive = true
+        if Value then
             humanoid.WalkSpeed = SPEED_VALUE
-
-            -- Bucle que forza la velocidad constantemente
             speedBypassConnection = RunService.Heartbeat:Connect(function()
                 pcall(function()
                     if humanoid and humanoid.WalkSpeed ~= SPEED_VALUE then
@@ -247,15 +242,11 @@ StealTab:CreateToggle({
                 end)
             end)
         else
-            speedBypassActive = false
-
             if speedBypassConnection then
                 speedBypassConnection:Disconnect()
                 speedBypassConnection = nil
             end
-
-            -- Restaurar velocidad estándar
-            humanoid.WalkSpeed = 34
+            humanoid.WalkSpeed = 16
         end
     end,
 })
