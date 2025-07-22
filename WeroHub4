@@ -323,6 +323,42 @@ StealTab:CreateButton({
     end,
 })
 
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local LocalPlayer = Players.LocalPlayer
+
+StealTab:CreateButton({
+    Name = "Tp Forward (Bypass Pro)",
+    Callback = function()
+        local char = LocalPlayer.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if not hrp or not hum then return end
+
+        -- Guardar WalkSpeed original y setear uno más alto temporalmente
+        local originalSpeed = hum.WalkSpeed
+        hum.WalkSpeed = 59
+
+        -- Simular presión de tecla “W” moviéndose al frente por 0.2 segundos
+        local direction = hrp.CFrame.LookVector
+        local timeToMove = 0.2
+        local elapsed = 0
+
+        local connection
+        connection = RunService.RenderStepped:Connect(function(dt)
+            elapsed += dt
+            if elapsed >= timeToMove then
+                connection:Disconnect()
+                hum.WalkSpeed = originalSpeed
+            else
+                hrp.Velocity = direction * hum.WalkSpeed
+            end
+        end)
+    end,
+})
+
 
 -- ============================================================
 -- PLAYER TAB
