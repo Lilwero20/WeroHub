@@ -257,101 +257,111 @@ local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local savedPosition = nil
 
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local localPlayer = Players.LocalPlayer
+
+local savedPosition = nil
+
+-- Botón para guardar posición
 StealTab:CreateButton({
 	Name = "Guardar Posición",
 	Callback = function()
-		local char = player.Character
+		local char = localPlayer.Character or localPlayer.CharacterAdded:Wait()
 		if char and char:FindFirstChild("HumanoidRootPart") then
 			savedPosition = char.HumanoidRootPart.Position
 			print("📍 Posición guardada:", savedPosition)
+		else
+			warn("❌ Personaje o HumanoidRootPart no encontrado")
 		end
 	end,
 })
 
+-- Botón para volar a la posición guardada con bypass indetectable
 StealTab:CreateButton({
-	Name = "Volar a posición guardada(Bypass)",
+	Name = "Volar a posición guardada",
 	Callback = function()
-		local char = player.Character
+		local char = localPlayer.Character or localPlayer.CharacterAdded:Wait()
 		if not savedPosition then
 			warn("❌ No hay posición guardada.")
 			return
 		end
-		if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+		if not char or not char:FindFirstChild("HumanoidRootPart") then
+			warn("❌ Personaje o HumanoidRootPart no encontrado")
+			return
+		end
 
 		local hrp = char:WaitForChild("HumanoidRootPart")
 		local humanoid = char:FindFirstChildWhichIsA("Humanoid")
+		if not humanoid then
+			warn("❌ Humanoid no encontrado")
+			return
+		end
+
 		local gravity = workspace.Gravity
 
-		-- Preparar vuelo indetectable
 		workspace.Gravity = 25
 		humanoid:ChangeState(Enum.HumanoidStateType.Physics)
 
-		-- Subir 10 studs al cielo (evita detección de colisiones)
 		local above = hrp.Position + Vector3.new(0, 10, 0)
+		hrp.CFrame = CFrame.new(above)
+
 		local direction = (savedPosition - hrp.Position)
 		direction = Vector3.new(direction.X, 0, direction.Z)
 
-		local totalDist = direction.Magnitude
 		local speed = 59
-		local time = totalDist / speed
+		local dist = direction.Magnitude
+		local duration = dist / speed
 		local startTime = tick()
 
-		local flying = true
 		local conn
 		conn = RunService.RenderStepped:Connect(function()
 			local now = tick()
 			local dt = now - startTime
-			if dt >= time then
+			if dt >= duration then
 				conn:Disconnect()
-				-- Bajar los 10 studs
 				hrp.CFrame = CFrame.new(savedPosition)
-				wait(0.1)
+				task.wait(0.1)
 				workspace.Gravity = gravity
 				humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
 				return
 			end
-
 			local moveDir = direction.Unit
 			humanoid:Move(moveDir * speed, false)
 		end)
-
-		-- Subir antes de avanzar
-		hrp.CFrame = CFrame.new(above)
 	end,
 })
 
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local LocalPlayer = Players.LocalPlayer
-
+-- Botón para Tp Forward con bypass
 StealTab:CreateButton({
 	Name = "Tp Forward (Bypass)",
 	Callback = function()
-		local char = player.Character
-		if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+		local char = localPlayer.Character or localPlayer.CharacterAdded:Wait()
+		if not char or not char:FindFirstChild("HumanoidRootPart") then
+			warn("❌ Personaje o HumanoidRootPart no encontrado")
+			return
+		end
 
 		local hrp = char:WaitForChild("HumanoidRootPart")
 		local humanoid = char:FindFirstChildWhichIsA("Humanoid")
-		if not humanoid then return end
+		if not humanoid then
+			warn("❌ Humanoid no encontrado")
+			return
+		end
 
-		-- Bypass preparación
 		humanoid:ChangeState(Enum.HumanoidStateType.Seated)
 		task.wait(0.01)
 
-		-- Calcular dirección
 		local cam = workspace.CurrentCamera
 		local lookVec = cam.CFrame.LookVector
 		local newPosition = hrp.Position + (lookVec.Unit * 4)
-
-		-- Anticheat evasión suave
 		local safeCFrame = CFrame.new(newPosition)
+
 		char:PivotTo(safeCFrame)
 		task.wait(0.01)
 
-		-- Restaurar estado
 		humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-	end
+	end,
 })
 
 
