@@ -219,11 +219,11 @@ TeleportTab:CreateToggle({
 local StealTab = Window:CreateTab("Steal a Brainrot", 4483362458)
 
 local RunService = game:GetService("RunService")
-local SPEED_VALUE = 50
+local SPEED_VALUE = 57
 local speedBypassConnection
 
 local Toggle = StealTab:CreateToggle({ -- <- usar StealTab aquí
-    Name = "Speed 50 Bypass",
+    Name = "Speed 57 Bypass",
     CurrentValue = false,
     Flag = "Toggle1",
     Callback = function(Value)
@@ -250,6 +250,51 @@ local Toggle = StealTab:CreateToggle({ -- <- usar StealTab aquí
         end
     end,
 })
+
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local savedPosition
+
+-- Botón para guardar posición
+StealTab:CreateButton({
+    Name = "Guardar Posición",
+    Callback = function()
+        local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local root = character:FindFirstChild("HumanoidRootPart")
+        if root then
+            savedPosition = root.Position
+            print("Posición guardada:", savedPosition)
+        end
+    end,
+})
+
+-- Botón para volar a la posición
+StealTab:CreateButton({
+    Name = "Volar a Posición Guardada",
+    Callback = function()
+        local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local root = character:FindFirstChild("HumanoidRootPart")
+        if root and savedPosition then
+            local upOffset = Vector3.new(0, 10, 0)
+            local downOffset = Vector3.new(0, -10, 0)
+
+            local function moveTo(pos)
+                root.CFrame = CFrame.new(pos)
+            end
+
+            -- Secuencia: subir, volar, bajar
+            moveTo(root.Position + upOffset)
+            wait(0.2)
+            moveTo(savedPosition + upOffset)
+            wait(0.2)
+            moveTo(savedPosition + downOffset)
+        else
+            warn("No hay posición guardada o el personaje no está listo.")
+        end
+    end,
+})
+
 
 -- ============================================================
 -- PLAYER TAB
