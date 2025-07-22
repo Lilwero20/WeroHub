@@ -218,6 +218,7 @@ TeleportTab:CreateToggle({
 
 local StealTab = Window:CreateTab("Steal a Brainrot", 4483362458)
 
+local savedPosition = nil
 local RunService = game:GetService("RunService")
 local SPEED_VALUE = 57
 local speedBypassConnection
@@ -256,71 +257,67 @@ local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local savedPosition = nil
 
--- Guardar posición
 StealTab:CreateButton({
-    Name = "Guardar Posición",
-    Callback = function()
-        local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-        local root = character:FindFirstChild("HumanoidRootPart")
-        if root then
-            savedPosition = root.Position
-            print("Posición guardada:", savedPosition)
-        end
-    end,
+	Name = "Guardar Posición",
+	Callback = function()
+		local char = player.Character
+		if char and char:FindFirstChild("HumanoidRootPart") then
+			savedPosition = char.HumanoidRootPart.Position
+			print("📍 Posición guardada:", savedPosition)
+		end
+	end,
 })
 
--- Volar a posición guardada
 StealTab:CreateButton({
-    Name = "Volar a Posición Guardada",
-    Callback = function()
-        if not savedPosition then
-            warn("No hay posición guardada.")
-            return
-        end
+	Name = "Volar a posición guardada",
+	Callback = function()
+		local char = player.Character
+		if not savedPosition then
+			warn("❌ No hay posición guardada.")
+			return
+		end
+		if not char or not char:FindFirstChild("HumanoidRootPart") then return end
 
-        local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-        local root = character:FindFirstChild("HumanoidRootPart")
-        if not root then return end
+		local hrp = char:WaitForChild("HumanoidRootPart")
+		local humanoid = char:FindFirstChildWhichIsA("Humanoid")
+		local gravity = workspace.Gravity
 
-        -- Bypass de antiteleport: usa BodyVelocity
-        local bodyVel = Instance.new("BodyVelocity")
-        bodyVel.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-        bodyVel.Velocity = Vector3.zero
-        bodyVel.P = 1250
-        bodyVel.Parent = root
+		-- Preparar vuelo indetectable
+		workspace.Gravity = 25
+		humanoid:ChangeState(Enum.HumanoidStateType.Physics)
 
-        local destination = savedPosition + Vector3.new(0, 10, 0)
-        local speed = 59
+		-- Subir 10 studs al cielo (evita detección de colisiones)
+		local above = hrp.Position + Vector3.new(0, 10, 0)
+		local direction = (savedPosition - hrp.Position)
+		direction = Vector3.new(direction.X, 0, direction.Z)
 
-        -- Subir 10 studs primero
-        root.CFrame = root.CFrame + Vector3.new(0,10,0)
+		local totalDist = direction.Magnitude
+		local speed = 59
+		local time = totalDist / speed
+		local startTime = tick()
 
-        -- Volar hacia destino
-        local flying = true
-        local connection
-        connection = RunService.Heartbeat:Connect(function(dt)
-            if not flying or not root or not root.Parent then
-                connection:Disconnect()
-                bodyVel:Destroy()
-                return
-            end
+		local flying = true
+		local conn
+		conn = RunService.RenderStepped:Connect(function()
+			local now = tick()
+			local dt = now - startTime
+			if dt >= time then
+				conn:Disconnect()
+				-- Bajar los 10 studs
+				hrp.CFrame = CFrame.new(savedPosition)
+				wait(0.1)
+				workspace.Gravity = gravity
+				humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+				return
+			end
 
-            local direction = (destination - root.Position)
-            local distance = direction.Magnitude
-            if distance < 3 then
-                -- Llegó al destino
-                flying = false
-                connection:Disconnect()
-                bodyVel:Destroy()
+			local moveDir = direction.Unit
+			humanoid:Move(moveDir * speed, false)
+		end)
 
-                -- Bajar 10 studs
-                root.CFrame = root.CFrame - Vector3.new(0,10,0)
-                return
-            end
-
-            bodyVel.Velocity = direction.Unit * speed
-        end)
-    end,
+		-- Subir antes de avanzar
+		hrp.CFrame = CFrame.new(above)
+	end,
 })
 
 local RunService = game:GetService("RunService")
