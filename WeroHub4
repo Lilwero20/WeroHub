@@ -1,303 +1,103 @@
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local hrp = character:WaitForChild("HumanoidRootPart")
-local humanoid = character:WaitForChild("Humanoid")
+local espFolder = Instance.new("Folder")
+espFolder.Name = "ESPFolder"
+espFolder.Parent = player:WaitForChild("PlayerGui")
 
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+-- Table para guardar ESPs creados
+local ESPs = {}
 
--- Variables
-local originalWalkSpeed = 34
-local boostedWalkSpeed = 60
-local speedToggle = false
-local speedBypassConnection = nil
+local function createESPForPlayer(targetPlayer)
+    if targetPlayer == player then return end
+    local character = targetPlayer.Character
+    if not character then return end
+    local head = character:FindFirstChild("Head")
+    if not head then return end
 
-local autoPunchToggle = false
-local antiRagdollToggle = false
+    -- Highlight (resaltar)
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "ESPHighlight"
+    highlight.Adornee = character
+    highlight.FillColor = Color3.new(1, 0, 0) -- Rojo
+    highlight.OutlineColor = Color3.new(1, 1, 1) -- Blanco
+    highlight.Parent = espFolder
 
-local spawnPos = hrp.Position
+    -- BillboardGui para nombre
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "ESPName"
+    billboard.Adornee = head
+    billboard.Size = UDim2.new(0, 150, 0, 35)
+    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Parent = espFolder
 
--- Crear ScreenGui para botones
-local playerGui = player:WaitForChild("PlayerGui")
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "BypassButtonsGui"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = playerGui
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(1, 0, 1, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.TextColor3 = Color3.new(1, 1, 1)
+    textLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+    textLabel.TextStrokeTransparency = 0
+    textLabel.Font = Enum.Font.SourceSansBold
+    textLabel.TextSize = 20
+    textLabel.Text = targetPlayer.Name
+    textLabel.Parent = billboard
 
-local function createButton(text, posY)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 160, 0, 40)
-    btn.Position = UDim2.new(0.5, -80, posY, 0)
-    btn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-    btn.TextColor3 = Color3.new(1,1,1)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 18
-    btn.Text = text
-    btn.Visible = false
-    btn.Parent = screenGui
-    return btn
+    ESPs[targetPlayer] = {
+        Highlight = highlight,
+        Billboard = billboard,
+        TextLabel = textLabel
+    }
 end
 
-local flyButton = createButton("Fly to Spawn", 0.8)
-local instantTPButton = createButton("Instant TP Up 80", 0.73)
-local autoPunchButton = createButton("Auto Punch (Tung Bat)", 0.66)
-
--- Función para cambiar velocidad con bypass (usando Heartbeat)
-local function setSpeedBypass(value)
-    local char = player.Character or player.CharacterAdded:Wait()
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not hum then return end
-
-    if value then
-        hum.WalkSpeed = boostedWalkSpeed
-        speedBypassConnection = RunService.Heartbeat:Connect(function()
-            pcall(function()
-                if hum and hum.WalkSpeed ~= boostedWalkSpeed then
-                    hum.WalkSpeed = boostedWalkSpeed
-                end
-            end)
-        end)
-    else
-        if speedBypassConnection then
-            speedBypassConnection:Disconnect()
-            speedBypassConnection = nil
-        end
-        hum.WalkSpeed = originalWalkSpeed
+local function removeESPForPlayer(targetPlayer)
+    local esp = ESPs[targetPlayer]
+    if esp then
+        if esp.Highlight then esp.Highlight:Destroy() end
+        if esp.Billboard then esp.Billboard:Destroy() end
+        ESPs[targetPlayer] = nil
     end
 end
 
--- Función vuelo gradual Fly to Spawn
-local function flyToPosition(targetPos)
-    if not hrp or not hrp.Parent then return end
-
-    local flying = true
-    local bv = Instance.new("BodyVelocity")
-    bv.MaxForce = Vector3.new(1e5,1e5,1e5)
-    bv.Velocity = Vector3.new(0,0,0)
-    bv.Parent = hrp
-
-    local hoverTarget = hrp.Position + Vector3.new(0,10,0)
-    local reachedHover = false
-
-    RunService:BindToRenderStep("FlyBypass", 301, function()
-        if not flying or not hrp or not hrp.Parent then
-            flying = false
-            RunService:UnbindFromRenderStep("FlyBypass")
-            bv:Destroy()
-            return
-        end
-
-        local currentPos = hrp.Position
-
-        if not reachedHover then
-            local direction = (hoverTarget - currentPos)
-            local dist = direction.Magnitude
-            if dist < 0.5 then
-                reachedHover = true
-            else
-                bv.Velocity = direction.Unit * 20
-                return
+local function updateESP()
+    for targetPlayer, esp in pairs(ESPs) do
+        local character = targetPlayer.Character
+        if character and character.Parent then
+            -- Forzar transparencia 0 para que no sean invisibles (bypass invisibilidad)
+            for _, part in pairs(character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.LocalTransparencyModifier = 0
+                end
             end
-        end
-
-        local targetHoverPos = targetPos + Vector3.new(0,10,0)
-        local direction = (targetHoverPos - hrp.Position)
-        local dist = direction.Magnitude
-
-        if dist > 1 then
-            bv.Velocity = direction.Unit * 34
         else
-            local downTarget = targetPos
-            local downDirection = (downTarget - hrp.Position)
-            local downDist = downDirection.Magnitude
-
-            if downDist > 0.5 then
-                bv.Velocity = downDirection.Unit * 20
-            else
-                flying = false
-                RunService:UnbindFromRenderStep("FlyBypass")
-                bv:Destroy()
-            end
+            removeESPForPlayer(targetPlayer)
         end
+    end
+end
+
+-- Cuando un jugador se une
+Players.PlayerAdded:Connect(function(plr)
+    plr.CharacterAdded:Connect(function()
+        wait(0.5)
+        createESPForPlayer(plr)
     end)
-end
+end)
 
--- Función Instant TP Up 80 con Tween y bypass
-local function instantTPUp()
-    if not hrp or not hrp.Parent then return end
-    local targetPos = hrp.Position + Vector3.new(0, 80, 0)
-    local tween = TweenService:Create(hrp, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = CFrame.new(targetPos)})
-    tween:Play()
-end
-
--- Función auto punch
-local function autoPunch()
-    if not character or not hrp or not hrp.Parent then return end
-    local tool = character:FindFirstChildOfClass("Tool")
-    if not tool or tool.Name ~= "Tung Bat" then return end
-
-    for _, target in pairs(Players:GetPlayers()) do
-        if target ~= player and target.Character and target.Character:FindFirstChild("HumanoidRootPart") and target.Character:FindFirstChild("Humanoid") then
-            local targetHRP = target.Character.HumanoidRootPart
-            local targetHumanoid = target.Character.Humanoid
-            if (hrp.Position - targetHRP.Position).Magnitude <= 9 and targetHumanoid.Health > 0 then
-                tool:Activate()
-                task.wait(0.5)
-                tool:Deactivate()
-            end
+-- Cuando un jugador ya está en el juego
+for _, plr in pairs(Players:GetPlayers()) do
+    if plr ~= player then
+        if plr.Character then
+            createESPForPlayer(plr)
         end
-    end
-end
-
--- Función Anti Ragdoll (quita estado ragdoll con BodyVelocity y resetear HipHeight)
-local ragdollConnection = nil
-local function setAntiRagdoll(state)
-    local char = player.Character or player.CharacterAdded:Wait()
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hum or not hrp then return end
-
-    if state then
-        ragdollConnection = RunService.Heartbeat:Connect(function()
-            pcall(function()
-                -- Eliminar BodyVelocity/BodyGyro que pongan ragdoll (esto depende del juego)
-                for _, v in pairs(hrp:GetChildren()) do
-                    if v:IsA("BodyVelocity") or v:IsA("BodyGyro") then
-                        v:Destroy()
-                    end
-                end
-                -- Resetear HipHeight para que no se caiga (si el juego usa Humanoid HipHeight)
-                if hum.HipHeight ~= 2 then
-                    hum.HipHeight = 2
-                end
-                -- Forzar estado a PlatformStand false
-                if hum.PlatformStand then
-                    hum.PlatformStand = false
-                end
-            end)
+        plr.CharacterAdded:Connect(function()
+            wait(0.5)
+            createESPForPlayer(plr)
         end)
-    else
-        if ragdollConnection then
-            ragdollConnection:Disconnect()
-            ragdollConnection = nil
-        end
     end
 end
 
--- Setup Rayfield Window y pestaña
-local Window = Rayfield:CreateWindow({
-    Name = "WeroHub - Steal a Brainrot",
-    LoadingTitle = "WeroHub",
-    LoadingSubtitle = "Speed, Teleport, Punch & AntiRagdoll",
-    ConfigurationSaving = {
-       Enabled = true,
-       FolderName = nil,
-       FileName = "WeroHubConfig"
-    },
-    Discord = {
-       Enabled = false,
-    },
-    KeySystem = false,
-})
-
-local Tab = Window:CreateTab("Main")
-
--- Toggle Speed Bypass con tu método
-Tab:CreateToggle({
-    Name = "Speed 60 Bypass",
-    CurrentValue = false,
-    Flag = "Toggle1",
-    Callback = function(Value)
-        speedToggle = Value
-        setSpeedBypass(Value)
-    end,
-})
-
--- Toggle para mostrar botón Fly to Spawn
-local flyButtonToggle = false
-Tab:CreateToggle({
-    Name = "Show Fly to Spawn Button",
-    CurrentValue = false,
-    Flag = "FlyButtonToggle",
-    Callback = function(value)
-        flyButtonToggle = value
-        flyButton.Visible = flyButtonToggle
-        if flyButtonToggle then
-            spawnPos = hrp.Position -- Actualizar spawn
-        end
-    end
-})
-
--- Toggle para mostrar botón Instant TP Up
-local instantTPButtonToggle = false
-Tab:CreateToggle({
-    Name = "Show Instant TP Up Button",
-    CurrentValue = false,
-    Flag = "InstantTPButtonToggle",
-    Callback = function(value)
-        instantTPButtonToggle = value
-        instantTPButton.Visible = instantTPButtonToggle
-    end
-})
-
--- Toggle Auto Punch
-Tab:CreateToggle({
-    Name = "Auto Punch (Tung Bat)",
-    CurrentValue = false,
-    Flag = "AutoPunchToggle",
-    Callback = function(value)
-        autoPunchToggle = value
-    end
-})
-
--- Toggle Anti Ragdoll
-Tab:CreateToggle({
-    Name = "Anti Ragdoll",
-    CurrentValue = false,
-    Flag = "AntiRagdollToggle",
-    Callback = function(value)
-        antiRagdollToggle = value
-        setAntiRagdoll(value)
-    end
-})
-
--- Eventos botones
-flyButton.MouseButton1Click:Connect(function()
-    flyToPosition(spawnPos)
-end)
-
-instantTPButton.MouseButton1Click:Connect(function()
-    instantTPUp()
-end)
-
--- Loop Auto Punch
-spawn(function()
-    while true do
-        task.wait(0.3)
-        if autoPunchToggle then
-            autoPunch()
-        end
-    end
-end)
-
--- Reconectar al morir para mantener speed y gui
-player.CharacterAdded:Connect(function(char)
-    character = char
-    hrp = character:WaitForChild("HumanoidRootPart")
-    humanoid = character:WaitForChild("Humanoid")
-    spawnPos = hrp.Position
-
-    if speedToggle then
-        setSpeedBypass(true)
-    else
-        setSpeedBypass(false)
-    end
-
-    if antiRagdollToggle then
-        setAntiRagdoll(true)
-    end
+-- Loop para mantener la transparencia cero y actualizar el ESP
+RunService.Heartbeat:Connect(function()
+    updateESP()
 end)
