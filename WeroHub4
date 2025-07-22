@@ -251,12 +251,12 @@ local Toggle = StealTab:CreateToggle({ -- <- usar StealTab aquí
     end,
 })
 
-local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
-local savedPosition
+local savedPosition = nil
 
--- Botón para guardar posición
+-- Guardar posición
 StealTab:CreateButton({
     Name = "Guardar Posición",
     Callback = function()
@@ -269,29 +269,57 @@ StealTab:CreateButton({
     end,
 })
 
--- Botón para volar a la posición
+-- Volar a posición guardada
 StealTab:CreateButton({
     Name = "Volar a Posición Guardada",
     Callback = function()
+        if not savedPosition then
+            warn("No hay posición guardada.")
+            return
+        end
+
         local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
         local root = character:FindFirstChild("HumanoidRootPart")
-        if root and savedPosition then
-            local upOffset = Vector3.new(0, 10, 0)
-            local downOffset = Vector3.new(0, -10, 0)
+        if not root then return end
 
-            local function moveTo(pos)
-                root.CFrame = CFrame.new(pos)
+        -- Bypass de antiteleport: usa BodyVelocity
+        local bodyVel = Instance.new("BodyVelocity")
+        bodyVel.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+        bodyVel.Velocity = Vector3.zero
+        bodyVel.P = 1250
+        bodyVel.Parent = root
+
+        local destination = savedPosition + Vector3.new(0, 10, 0)
+        local speed = 59
+
+        -- Subir 10 studs primero
+        root.CFrame = root.CFrame + Vector3.new(0,10,0)
+
+        -- Volar hacia destino
+        local flying = true
+        local connection
+        connection = RunService.Heartbeat:Connect(function(dt)
+            if not flying or not root or not root.Parent then
+                connection:Disconnect()
+                bodyVel:Destroy()
+                return
             end
 
-            -- Secuencia: subir, volar, bajar
-            moveTo(root.Position + upOffset)
-            wait(0.2)
-            moveTo(savedPosition + upOffset)
-            wait(0.2)
-            moveTo(savedPosition + downOffset)
-        else
-            warn("No hay posición guardada o el personaje no está listo.")
-        end
+            local direction = (destination - root.Position)
+            local distance = direction.Magnitude
+            if distance < 3 then
+                -- Llegó al destino
+                flying = false
+                connection:Disconnect()
+                bodyVel:Destroy()
+
+                -- Bajar 10 studs
+                root.CFrame = root.CFrame - Vector3.new(0,10,0)
+                return
+            end
+
+            bodyVel.Velocity = direction.Unit * speed
+        end)
     end,
 })
 
