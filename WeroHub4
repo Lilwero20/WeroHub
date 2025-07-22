@@ -186,14 +186,32 @@ RunService.Heartbeat:Connect(updateESP)
 -- Función bypass teletransporte a la posición guardada
 local function bypassTeleport(targetPos)
     if not hrp or not targetPos then return end
-    -- Teletransporta arriba 50 studs
-    local upPos = hrp.Position + Vector3.new(0, 50, 0)
-    hrp.CFrame = CFrame.new(upPos)
-    wait(0.15)
-    -- Tween para bajar suavemente a targetPos + 3 studs arriba
-    local tween = TweenService:Create(hrp, TweenInfo.new(0.5, Enum.EasingStyle.Linear), {CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0))})
-    tween:Play()
-    tween.Completed:Wait()
+
+    local character = player.Character
+    if not character then return end
+
+    -- Primero, sube 80 studs (como pediste)
+    local upPos = hrp.Position + Vector3.new(0, 80, 0)
+
+    -- Crear BodyPosition para forzar posición (bypass anticheat)
+    local bodyPos = Instance.new("BodyPosition")
+    bodyPos.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+    bodyPos.P = 1e4
+    bodyPos.D = 100
+    bodyPos.Position = upPos
+    bodyPos.Parent = hrp
+
+    -- Espera que suba
+    wait(0.3)
+
+    -- Mover BodyPosition a la posición objetivo + 3 studs arriba
+    bodyPos.Position = targetPos + Vector3.new(0, 3, 0)
+
+    -- Espera a que se mueva
+    wait(0.6)
+
+    -- Quitar BodyPosition para que quede en la posición final
+    bodyPos:Destroy()
 end
 
 -- Toggles y botones Rayfield
