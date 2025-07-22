@@ -1,14 +1,37 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
+
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+   Name = "WeroHub Steal a Brainrot",
+   LoadingTitle = "WeroHub Steal a Brainrot Script",
+   LoadingSubtitle = "by WeroScripts",
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = nil,
+      FileName = "Big Hub"
+   },
+   Discord = { Enabled = false },
+   KeySystem = false,
+})
+
+local Tab = Window:CreateTab("Main")
+
+-- Variables ESP
 local espFolder = Instance.new("Folder")
 espFolder.Name = "ESPFolder"
 espFolder.Parent = player:WaitForChild("PlayerGui")
-
--- Table para guardar ESPs creados
 local ESPs = {}
 
+-- Variables Tung Bat Auto Punch
+local AUTO_PUNCH_ENABLED = false
+local TUNG_BAT_NAME = "Tung Bat"
+
+-- Función ESP
 local function createESPForPlayer(targetPlayer)
     if targetPlayer == player then return end
     local character = targetPlayer.Character
@@ -16,15 +39,17 @@ local function createESPForPlayer(targetPlayer)
     local head = character:FindFirstChild("Head")
     if not head then return end
 
-    -- Highlight (resaltar)
+    if ESPs[targetPlayer] then return end
+
+    -- Highlight
     local highlight = Instance.new("Highlight")
     highlight.Name = "ESPHighlight"
     highlight.Adornee = character
-    highlight.FillColor = Color3.new(1, 0, 0) -- Rojo
-    highlight.OutlineColor = Color3.new(1, 1, 1) -- Blanco
+    highlight.FillColor = Color3.new(1, 0, 0)
+    highlight.OutlineColor = Color3.new(1, 1, 1)
     highlight.Parent = espFolder
 
-    -- BillboardGui para nombre
+    -- BillboardGui con nombre
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "ESPName"
     billboard.Adornee = head
@@ -76,7 +101,7 @@ local function updateESP()
     end
 end
 
--- Cuando un jugador se une
+-- Conectar eventos ESP
 Players.PlayerAdded:Connect(function(plr)
     plr.CharacterAdded:Connect(function()
         wait(0.5)
@@ -84,7 +109,6 @@ Players.PlayerAdded:Connect(function(plr)
     end)
 end)
 
--- Cuando un jugador ya está en el juego
 for _, plr in pairs(Players:GetPlayers()) do
     if plr ~= player then
         if plr.Character then
@@ -97,7 +121,74 @@ for _, plr in pairs(Players:GetPlayers()) do
     end
 end
 
--- Loop para mantener la transparencia cero y actualizar el ESP
-RunService.Heartbeat:Connect(function()
-    updateESP()
-end)
+-- Auto Tung Bat Punch
+local function tryAutoPunch()
+    if not AUTO_PUNCH_ENABLED then return end
+    local character = player.Character
+    if not character then return end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not humanoid or not hrp then return end
+
+    -- Verificar si tienes Tung Bat equipado
+    local tool = player.Character:FindFirstChildOfClass("Tool")
+    if not tool or tool.Name ~= TUNG_BAT_NAME then return end
+
+    for _, targetPlayer in pairs(Players:GetPlayers()) do
+        if targetPlayer ~= player and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local targetHRP = targetPlayer.Character.HumanoidRootPart
+            local distance = (hrp.Position - targetHRP.Position).Magnitude
+            if distance <= 10 then
+                -- Ejecutar golpe (trigger al evento de la tool)
+                -- Esto depende de cómo esté programada la herramienta,
+                -- usualmente es un RemoteEvent o función que se dispara al atacar
+                -- Como ejemplo, vamos a activar la herramienta y "click" si tiene evento 'Activate'
+
+                if tool:FindFirstChild("RemoteEvent") then
+                    -- Algunos juegos usan RemoteEvent para golpes
+                    tool.RemoteEvent:FireServer(targetPlayer)
+                elseif tool:FindFirstChildWhichIsA("RemoteEvent") then
+                    tool:FindFirstChildWhichIsA("RemoteEvent"):FireServer(targetPlayer)
+                else
+                    -- Como fallback, intentar activar la tool para hacer el golpe normal
+                    tool:Activate()
+                end
+                -- Solo golpeamos a uno por frame para no saturar
+                break
+            end
+        end
+    end
+end
+
+RunService.Heartbeat:Connect(tryAutoPunch)
+RunService.Heartbeat:Connect(updateESP)
+
+-- Crear toggles en Rayfield
+
+Tab:CreateToggle({
+    Name = "ESP Players",
+    CurrentValue = false,
+    Flag = "ToggleESP",
+    Callback = function(value)
+        if value then
+            for _, plr in pairs(Players:GetPlayers()) do
+                if plr ~= player and plr.Character then
+                    createESPForPlayer(plr)
+                end
+            end
+        else
+            for plr, _ in pairs(ESPs) do
+                removeESPForPlayer(plr)
+            end
+        end
+    end,
+})
+
+Tab:CreateToggle({
+    Name = "Auto Tung Bat Punch (10 studs)",
+    CurrentValue = false,
+    Flag = "ToggleAutoTungBat",
+    Callback = function(value)
+        AUTO_PUNCH_ENABLED = value
+    end,
+})
