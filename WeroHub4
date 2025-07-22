@@ -13,7 +13,7 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Window = Rayfield:CreateWindow({
    Name = "WeroHub Steal a Brainrot",
    Icon = 0, -- Icon in Topbar. Can use Lucide Icons (string) or Roblox Image (number). 0 to use no icon (default).
-   LoadingTitle = "Rayfield Interface Suite",
+   LoadingTitle = "WeroHub Steal a Brainrot Script",
    LoadingSubtitle = "by WeroScripts",
    ShowText = "Rayfield", -- for mobile users to unhide rayfield, change if you'd like
    Theme = "Default", -- Check https://docs.sirius.menu/rayfield/configuration/themes
@@ -85,33 +85,28 @@ local function setSpeed(speed)
     end
 end
 
--- Función vuelo gradual para "Fly to Spawn"
+-- Función vuelo ajustada: sube 10, vuela a 34 studs/s, baja 10
 local function flyToPosition(targetPos)
     if not hrp or not hrp.Parent then return end
-    local bv = Instance.new("BodyVelocity")
-    bv.MaxForce = Vector3.new(1e5,1e5,1e5)
-    bv.Velocity = Vector3.new(0,0,0)
-    bv.Parent = hrp
 
-    local flying = true
+    local function smoothMove(toPosition)
+        local distance = (hrp.Position - toPosition).Magnitude
+        local duration = distance / 34 -- 34 studs por segundo
+        local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
+        local tween = TweenService:Create(hrp, tweenInfo, {CFrame = CFrame.new(toPosition)})
+        tween:Play()
+        tween.Completed:Wait()
+    end
 
-    RunService:BindToRenderStep("FlyBypass", 301, function()
-        if not flying or not hrp or not hrp.Parent then
-            flying = false
-            RunService:UnbindFromRenderStep("FlyBypass")
-            bv:Destroy()
-            return
-        end
-        local direction = (targetPos - hrp.Position)
-        local dist = direction.Magnitude
-        if dist < 1 then
-            flying = false
-            RunService:UnbindFromRenderStep("FlyBypass")
-            bv:Destroy()
-            return
-        end
-        bv.Velocity = direction.Unit * 59
-    end)
+    local currentPos = hrp.Position
+    local up10 = currentPos + Vector3.new(0, 10, 0)
+    local flyTarget = Vector3.new(targetPos.X, targetPos.Y + 10, targetPos.Z)
+    local down10 = targetPos
+
+    -- Mover en 3 pasos
+    smoothMove(up10)
+    smoothMove(flyTarget)
+    smoothMove(down10)
 end
 
 -- Función para instant TP arriba con tween
@@ -170,17 +165,30 @@ Tab:CreateToggle({
     end
 })
 
--- Toggle para mostrar botón Instant TP Up
-local instantTPButtonToggle = false
-Tab:CreateToggle({
-    Name = "Show Instant TP Up Button",
-    CurrentValue = false,
-    Flag = "InstantTPButtonToggle",
-    Callback = function(value)
-        instantTPButtonToggle = value
-        instantTPButton.Visible = instantTPButtonToggle
-    end
+Tab:CreateButton({
+    Name = "Instant Steal",
+    Callback = function()
+        local plr = game.Players.LocalPlayer
+        local char = plr.Character or plr.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+        local spawnPosition = workspace:FindFirstChild("SpawnLocation") and workspace.SpawnLocation.Position or Vector3.new(0, 0, 0)
+
+        -- Paso 1: subir 10 studs
+        local upPosition = hrp.Position + Vector3.new(0, 10, 0)
+        hrp.CFrame = CFrame.new(upPosition)
+        task.wait(0.05)
+
+        -- Paso 2: mover al destino con altura
+        local finalPos = spawnPosition + Vector3.new(0, 10, 0)
+        hrp.CFrame = CFrame.new(finalPos)
+        task.wait(0.05)
+
+        -- Paso 3: bajar 10 studs
+        hrp.CFrame = CFrame.new(spawnPosition)
+    end,
 })
+
+
 
 -- Eventos de botones
 flyButton.MouseButton1Click:Connect(function()
