@@ -7,127 +7,132 @@ local character = player.Character or player.CharacterAdded:Wait()
 local hrp = character:WaitForChild("HumanoidRootPart")
 local humanoid = character:WaitForChild("Humanoid")
 
--- Cargar Rayfield
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
--- Variables de velocidad
 local originalWalkSpeed = 34
 local boostedWalkSpeed = 60
 local speedToggle = false
-
 local spawnPos = hrp.Position
 
 -- Crear ScreenGui para los botones (padre de los botones)
 local playerGui = player:WaitForChild("PlayerGui")
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "BypassButtonsGui"
+screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
 -- Botón Fly to Spawn (invisible al inicio)
 local flyButton = Instance.new("TextButton")
-flyButton.Size = UDim2.new(0, 160, 0, 50)
-flyButton.Position = UDim2.new(0.5, -80, 0.8, 0)
+flyButton.Size = UDim2.new(0, 160, 0, 40)
+flyButton.Position = UDim2.new(0.5, -80, 0.85, 0)
 flyButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 flyButton.TextColor3 = Color3.new(1,1,1)
 flyButton.Font = Enum.Font.GothamBold
-flyButton.TextSize = 20
+flyButton.TextSize = 18
 flyButton.Text = "Fly to Spawn"
 flyButton.Visible = false
 flyButton.Parent = screenGui
 
 -- Botón Instant TP Up (invisible al inicio)
-local instantTPButton = flyButton:Clone()
-instantTPButton.Position = UDim2.new(0.5, -80, 0.7, 0)
+local instantTPButton = Instance.new("TextButton")
+instantTPButton.Size = UDim2.new(0, 160, 0, 40)
+instantTPButton.Position = UDim2.new(0.5, -80, 0.78, 0)
+instantTPButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+instantTPButton.TextColor3 = Color3.new(1,1,1)
+instantTPButton.Font = Enum.Font.GothamBold
+instantTPButton.TextSize = 18
 instantTPButton.Text = "Instant TP Up 50"
 instantTPButton.Visible = false
 instantTPButton.Parent = screenGui
 
--- Función para cambiar velocidad
+-- Función para cambiar velocidad con bypass
 local function setSpeed(speed)
     if humanoid and humanoid.Parent then
         humanoid.WalkSpeed = speed
     end
 end
 
--- Función vuelo a spawn con subida y bajada 10 studs, moviendo a 34 de velocidad mientras vuela
+-- Función vuelo gradual para "Fly to Spawn"
 local function flyToPosition(targetPos)
     if not hrp or not hrp.Parent then return end
-
-    local flyingUp = true
-    local flyingDown = false
-
-    -- Subir 10 studs
-    local targetUp = hrp.Position + Vector3.new(0,10,0)
-
+    
     local bv = Instance.new("BodyVelocity")
     bv.MaxForce = Vector3.new(1e5,1e5,1e5)
     bv.Parent = hrp
-
-    local connection
-    connection = RunService.Heartbeat:Connect(function()
-        if not hrp or not hrp.Parent then
+    
+    local flying = true
+    
+    local stage = 1
+    local stageTimer = 0
+    
+    RunService:BindToRenderStep("FlyBypass", 301, function()
+        if not flying or not hrp or not hrp.Parent then
+            flying = false
+            RunService:UnbindFromRenderStep("FlyBypass")
             bv:Destroy()
-            connection:Disconnect()
             return
         end
-        if flyingUp then
-            local direction = targetUp - hrp.Position
-            if direction.Magnitude < 0.5 then
-                flyingUp = false
+        
+        if stage == 1 then
+            -- Subir 10 studs
+            local targetUp = hrp.Position + Vector3.new(0,10,0)
+            local directionUp = (targetUp - hrp.Position)
+            if directionUp.Magnitude < 0.5 then
+                stage = 2
             else
-                bv.Velocity = direction.Unit * 34
+                bv.Velocity = directionUp.Unit * 34
             end
-        elseif not flyingDown then
-            -- Volar hacia spawn a 34 de velocidad (horizontal + vertical)
-            local horizontalTarget = Vector3.new(targetPos.X, hrp.Position.Y, targetPos.Z)
-            local direction = horizontalTarget - hrp.Position
+        elseif stage == 2 then
+            -- Volar hacia spawn a velocidad 34
+            local direction = (targetPos - hrp.Position)
             if direction.Magnitude < 1 then
-                flyingDown = true
+                stage = 3
             else
                 bv.Velocity = direction.Unit * 34
             end
-        else
+        elseif stage == 3 then
             -- Bajar 10 studs
-            local targetDown = Vector3.new(hrp.Position.X, targetPos.Y, hrp.Position.Z)
-            local direction = targetDown - hrp.Position
-            if math.abs(direction.Y) < 0.5 then
+            local targetDown = targetPos - Vector3.new(0,10,0)
+            local directionDown = (targetDown - hrp.Position)
+            if directionDown.Magnitude < 0.5 then
+                flying = false
+                RunService:UnbindFromRenderStep("FlyBypass")
                 bv:Destroy()
-                connection:Disconnect()
+                return
             else
-                bv.Velocity = Vector3.new(0, -34, 0)
+                bv.Velocity = directionDown.Unit * 34
             end
         end
     end)
 end
 
--- Función TP instantáneo con bypass muy bueno (cambia CFrame gradualmente para evitar detección)
-local function instantTPBypass(targetPos)
+-- Función para teleport instantáneo arriba 50 studs (tween)
+local function instantTPUp()
     if not hrp or not hrp.Parent then return end
-
-    -- Tween rápido a la posición deseada para simular TP indetectable
-    local tween = TweenService:Create(hrp, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = CFrame.new(targetPos)})
+    local targetPos = hrp.Position + Vector3.new(0,50,0)
+    local tween = TweenService:Create(hrp, TweenInfo.new(0.15, Enum.EasingStyle.Linear), {CFrame = CFrame.new(targetPos)})
     tween:Play()
 end
 
--- Crear ventana principal
+-- Crear ventana y pestaña Rayfield
 local Window = Rayfield:CreateWindow({
-   Name = "WeroHub Steal a Brainrot",
-   LoadingTitle = "WeroHub Steal a Brainrot Script",
-   LoadingSubtitle = "by WeroScripts",
-   ConfigurationSaving = {
-      Enabled = true,
-      FolderName = nil,
-      FileName = "Big Hub"
-   },
-   Discord = {
-      Enabled = false,
-   },
-   KeySystem = false,
+    Name = "WeroHub - Speed & Teleport Bypass",
+    LoadingTitle = "WeroHub",
+    LoadingSubtitle = "Speed & Teleport",
+    ConfigurationSaving = {
+       Enabled = true,
+       FolderName = nil,
+       FileName = "WeroHubConfig"
+    },
+    Discord = {
+       Enabled = false,
+    },
+    KeySystem = false,
 })
 
 local Tab = Window:CreateTab("Main")
 
--- Toggle para velocidad con bypass
+-- Toggle para velocidad
 Tab:CreateToggle({
     Name = "Speed Bypass (60)",
     CurrentValue = false,
@@ -152,7 +157,7 @@ Tab:CreateToggle({
         flyButtonToggle = value
         flyButton.Visible = flyButtonToggle
         if flyButtonToggle then
-            spawnPos = hrp.Position -- Actualiza spawnPos al abrir toggle
+            spawnPos = hrp.Position
         end
     end
 })
@@ -169,28 +174,11 @@ Tab:CreateToggle({
     end
 })
 
--- Evento click botón Fly to Spawn
+-- Eventos de botones
 flyButton.MouseButton1Click:Connect(function()
     flyToPosition(spawnPos)
 end)
 
--- Evento click botón Instant TP Up
 instantTPButton.MouseButton1Click:Connect(function()
-    -- Teleport 50 studs arriba con bypass instantáneo (sin vuelo)
-    local targetPos = hrp.Position + Vector3.new(0, 50, 0)
-    instantTPBypass(targetPos)
+    instantTPUp()
 end)
-
--- Resetear velocidad y mostrar botones si reaparece el personaje (ej. después de morir)
-player.CharacterAdded:Connect(function(char)
-    character = char
-    hrp = character:WaitForChild("HumanoidRootPart")
-    humanoid = character:WaitForChild("Humanoid")
-
-    setSpeed(speedToggle and boostedWalkSpeed or originalWalkSpeed)
-    flyButton.Parent = playerGui
-    instantTPButton.Parent = playerGui
-    flyButton.Visible = flyButtonToggle
-    instantTPButton.Visible = instantTPButtonToggle
-end)
-
