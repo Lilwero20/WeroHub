@@ -222,7 +222,7 @@ local RunService = game:GetService("RunService")
 local SPEED_VALUE = 50
 local speedBypassConnection
 
-local Toggle = Tab:CreateToggle({
+local Toggle = StealTab:CreateToggle({ -- <- usar StealTab aquí
     Name = "Speed 50 Bypass",
     CurrentValue = false,
     Flag = "Toggle1",
