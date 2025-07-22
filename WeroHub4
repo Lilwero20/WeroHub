@@ -3,30 +3,30 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
 local character = player.Character or player.CharacterAdded:Wait()
 local hrp = character:WaitForChild("HumanoidRootPart")
 local humanoid = character:WaitForChild("Humanoid")
 
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-
+-- Variables para guardar estado
 local originalWalkSpeed = 34
 local boostedWalkSpeed = 60
 local speedToggle = false
+
 local spawnPos = hrp.Position
 
-local antiRagdollToggle = false
-
--- Crear ScreenGui para los botones (padre de los botones)
-local playerGui = player:WaitForChild("PlayerGui")
+-- Crear ScreenGui para botones
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "BypassButtonsGui"
-screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
--- Botón Fly to Spawn (invisible al inicio)
+-- Crear botones (invisibles al inicio)
 local flyButton = Instance.new("TextButton")
 flyButton.Size = UDim2.new(0, 160, 0, 40)
-flyButton.Position = UDim2.new(0.5, -80, 0.85, 0)
+flyButton.Position = UDim2.new(0.5, -80, 0.7, 0)
 flyButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 flyButton.TextColor3 = Color3.new(1,1,1)
 flyButton.Font = Enum.Font.GothamBold
@@ -35,37 +35,30 @@ flyButton.Text = "Fly to Spawn"
 flyButton.Visible = false
 flyButton.Parent = screenGui
 
--- Botón Instant TP Up (invisible al inicio)
-local instantTPButton = Instance.new("TextButton")
-instantTPButton.Size = UDim2.new(0, 160, 0, 40)
-instantTPButton.Position = UDim2.new(0.5, -80, 0.78, 0)
-instantTPButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-instantTPButton.TextColor3 = Color3.new(1,1,1)
-instantTPButton.Font = Enum.Font.GothamBold
-instantTPButton.TextSize = 18
-instantTPButton.Text = "Instant TP Up 50"
+local instantTPButton = flyButton:Clone()
+instantTPButton.Position = UDim2.new(0.5, -80, 0.62, 0)
+instantTPButton.Text = "Teleport Up 80 (Bypass TP)"
 instantTPButton.Visible = false
 instantTPButton.Parent = screenGui
 
--- Función para cambiar velocidad con bypass
+-- Función para setear velocidad (bypass básico)
 local function setSpeed(speed)
-    if humanoid and humanoid.Parent then
+    if humanoid then
         humanoid.WalkSpeed = speed
     end
 end
 
--- Función vuelo gradual para "Fly to Spawn"
+-- Función para volar hacia una posición (con BodyVelocity)
 local function flyToPosition(targetPos)
     if not hrp or not hrp.Parent then return end
-    
+
     local bv = Instance.new("BodyVelocity")
     bv.MaxForce = Vector3.new(1e5,1e5,1e5)
+    bv.Velocity = Vector3.new(0,0,0)
     bv.Parent = hrp
-    
+
     local flying = true
-    
-    local stage = 1
-    
+
     RunService:BindToRenderStep("FlyBypass", 301, function()
         if not flying or not hrp or not hrp.Parent then
             flying = false
@@ -73,80 +66,66 @@ local function flyToPosition(targetPos)
             bv:Destroy()
             return
         end
-        
-        if stage == 1 then
-            -- Subir 10 studs
-            local targetUp = hrp.Position + Vector3.new(0,10,0)
-            local directionUp = (targetUp - hrp.Position)
-            if directionUp.Magnitude < 0.5 then
-                stage = 2
-            else
-                bv.Velocity = directionUp.Unit * 34
-            end
-        elseif stage == 2 then
-            -- Volar hacia spawn a velocidad 34
-            local direction = (targetPos - hrp.Position)
-            if direction.Magnitude < 1 then
-                stage = 3
-            else
-                bv.Velocity = direction.Unit * 34
-            end
-        elseif stage == 3 then
-            -- Bajar 10 studs
-            local targetDown = targetPos - Vector3.new(0,10,0)
-            local directionDown = (targetDown - hrp.Position)
-            if directionDown.Magnitude < 0.5 then
-                flying = false
-                RunService:UnbindFromRenderStep("FlyBypass")
-                bv:Destroy()
-                return
-            else
-                bv.Velocity = directionDown.Unit * 34
-            end
+        local direction = (targetPos - hrp.Position)
+        local dist = direction.Magnitude
+        if dist < 1 then
+            flying = false
+            RunService:UnbindFromRenderStep("FlyBypass")
+            bv:Destroy()
+            return
         end
+        bv.Velocity = direction.Unit * 59
     end)
 end
 
--- Función para teleport instantáneo arriba 50 studs (tween)
-local function instantTPUp()
+-- Función para teleportar arriba con tween (bypass)
+local function teleportUpBypass()
     if not hrp or not hrp.Parent then return end
-    local targetPos = hrp.Position + Vector3.new(0,50,0)
-    local tween = TweenService:Create(hrp, TweenInfo.new(0.15, Enum.EasingStyle.Linear), {CFrame = CFrame.new(targetPos)})
+
+    local targetPos = hrp.Position + Vector3.new(0, 80, 0)
+
+    local tweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Linear)
+    local tween = TweenService:Create(hrp, tweenInfo, {CFrame = CFrame.new(targetPos)})
     tween:Play()
+    tween.Completed:Wait()
 end
 
--- Función Anti Ragdoll
-local function antiRagdoll()
-    if humanoid then
-        -- Cancela PlatformStand y Sit para evitar ragdoll o estar tumbado
-        if humanoid.PlatformStand then
-            humanoid.PlatformStand = false
-        end
-        if humanoid.Sit then
-            humanoid.Sit = false
-        end
+-- Actualizar referencias al respawnear
+local function onCharacterAdded(char)
+    character = char
+    hrp = character:WaitForChild("HumanoidRootPart")
+    humanoid = character:WaitForChild("Humanoid")
+    
+    -- Restaurar velocidad si toggle está activo
+    if speedToggle then
+        setSpeed(boostedWalkSpeed)
+    else
+        setSpeed(originalWalkSpeed)
     end
+    
+    -- Actualizar spawnPos al reaparecer
+    spawnPos = hrp.Position
 end
+
+player.CharacterAdded:Connect(onCharacterAdded)
 
 -- Crear ventana y pestaña Rayfield
 local Window = Rayfield:CreateWindow({
-    Name = "WeroHub - Speed & Teleport Bypass",
-    LoadingTitle = "WeroHub",
-    LoadingSubtitle = "Speed & Teleport",
-    ConfigurationSaving = {
-       Enabled = true,
-       FolderName = nil,
-       FileName = "WeroHubConfig"
-    },
-    Discord = {
-       Enabled = false,
-    },
-    KeySystem = false,
+   Name = "WeroHub Steal a Brainrot",
+   LoadingTitle = "WeroHub",
+   LoadingSubtitle = "Speed & Teleport",
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = nil,
+      FileName = "WeroHubConfig"
+   },
+   Discord = { Enabled = false },
+   KeySystem = false,
 })
 
 local Tab = Window:CreateTab("Main")
 
--- Toggle para velocidad
+-- Toggle velocidad
 Tab:CreateToggle({
     Name = "Speed Bypass (60)",
     CurrentValue = false,
@@ -161,7 +140,7 @@ Tab:CreateToggle({
     end
 })
 
--- Toggle para mostrar botón Fly to Spawn
+-- Toggle mostrar botón Fly to Spawn
 local flyButtonToggle = false
 Tab:CreateToggle({
     Name = "Show Fly to Spawn Button",
@@ -176,10 +155,10 @@ Tab:CreateToggle({
     end
 })
 
--- Toggle para mostrar botón Instant TP Up
+-- Toggle mostrar botón Teleport Up 80
 local instantTPButtonToggle = false
 Tab:CreateToggle({
-    Name = "Show Instant TP Up Button",
+    Name = "Show Teleport Up 80 Button",
     CurrentValue = false,
     Flag = "InstantTPButtonToggle",
     Callback = function(value)
@@ -188,28 +167,11 @@ Tab:CreateToggle({
     end
 })
 
--- Toggle Anti Ragdoll
-Tab:CreateToggle({
-    Name = "Anti Ragdoll",
-    CurrentValue = false,
-    Flag = "AntiRagdollToggle",
-    Callback = function(value)
-        antiRagdollToggle = value
-    end
-})
-
--- Eventos de botones
+-- Conexión de botones
 flyButton.MouseButton1Click:Connect(function()
     flyToPosition(spawnPos)
 end)
 
 instantTPButton.MouseButton1Click:Connect(function()
-    instantTPUp()
-end)
-
--- Loop que chequea estado Anti Ragdoll
-RunService.Heartbeat:Connect(function()
-    if antiRagdollToggle then
-        antiRagdoll()
-    end
+    teleportUpBypass()
 end)
