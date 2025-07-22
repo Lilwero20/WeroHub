@@ -261,245 +261,157 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local localPlayer = Players.LocalPlayer
 
-local savedPosition = nil
-
--- Botón para guardar posición
-StealTab:CreateButton({
-	Name = "Guardar Posición",
-	Callback = function()
-		local char = localPlayer.Character or localPlayer.CharacterAdded:Wait()
-		if char and char:FindFirstChild("HumanoidRootPart") then
-			savedPosition = char.HumanoidRootPart.Position
-			print("📍 Posición guardada:", savedPosition)
-		else
-			warn("❌ Personaje o HumanoidRootPart no encontrado")
-		end
-	end,
-})
-
--- Botón para volar a la posición guardada con bypass indetectable
-StealTab:CreateButton({
-	Name = "Volar a posición guardada",
-	Callback = function()
-		local char = localPlayer.Character or localPlayer.CharacterAdded:Wait()
-		if not savedPosition then
-			warn("❌ No hay posición guardada.")
-			return
-		end
-		if not char or not char:FindFirstChild("HumanoidRootPart") then
-			warn("❌ Personaje o HumanoidRootPart no encontrado")
-			return
-		end
-
-		local hrp = char:WaitForChild("HumanoidRootPart")
-		local humanoid = char:FindFirstChildWhichIsA("Humanoid")
-		if not humanoid then
-			warn("❌ Humanoid no encontrado")
-			return
-		end
-
-		local gravity = workspace.Gravity
-
-		workspace.Gravity = 25
-		humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-
-		local above = hrp.Position + Vector3.new(0, 10, 0)
-		hrp.CFrame = CFrame.new(above)
-
-		local direction = (savedPosition - hrp.Position)
-		direction = Vector3.new(direction.X, 0, direction.Z)
-
-		local speed = 59
-		local dist = direction.Magnitude
-		local duration = dist / speed
-		local startTime = tick()
-
-		local conn
-		conn = RunService.RenderStepped:Connect(function()
-			local now = tick()
-			local dt = now - startTime
-			if dt >= duration then
-				conn:Disconnect()
-				hrp.CFrame = CFrame.new(savedPosition)
-				task.wait(0.1)
-				workspace.Gravity = gravity
-				humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-				return
-			end
-			local moveDir = direction.Unit
-			humanoid:Move(moveDir * speed, false)
-		end)
-	end,
-})
-
--- Botón para Tp Forward con bypass
-StealTab:CreateButton({
-	Name = "Tp Forward (Bypass)",
-	Callback = function()
-		local char = localPlayer.Character or localPlayer.CharacterAdded:Wait()
-		if not char or not char:FindFirstChild("HumanoidRootPart") then
-			warn("❌ Personaje o HumanoidRootPart no encontrado")
-			return
-		end
-
-		local hrp = char:WaitForChild("HumanoidRootPart")
-		local humanoid = char:FindFirstChildWhichIsA("Humanoid")
-		if not humanoid then
-			warn("❌ Humanoid no encontrado")
-			return
-		end
-
-		humanoid:ChangeState(Enum.HumanoidStateType.Seated)
-		task.wait(0.01)
-
-		local cam = workspace.CurrentCamera
-		local lookVec = cam.CFrame.LookVector
-		local newPosition = hrp.Position + (lookVec.Unit * 4)
-		local safeCFrame = CFrame.new(newPosition)
-
-		char:PivotTo(safeCFrame)
-		task.wait(0.01)
-
-		humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-	end,
-})
-
-local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
 
-local autoPunchEnabled = false
-local punchRadius = 10
-local punchCooldown = 0.5
+-- Variable para guardar la posición
+local savedPosition = nil
 
-local lastPunchTime = 0
+-- Variables vuelo
+local flying = false
+local bodyVelocity
+local flyConnection
 
-StealTab:CreateToggle({
-    Name = "Auto Punch",
+-- Función para comenzar vuelo gradual con bypass
+local function startFly(targetPos)
+    local character = localPlayer.Character
+    if not character then return end
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    if flying then return end
+    flying = true
+
+    bodyVelocity = Instance.new("BodyVelocity")
+    bodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+    bodyVelocity.Velocity = Vector3.new(0,0,0)
+    bodyVelocity.Parent = hrp
+
+    local stage = 1 -- 1: subir 10 studs, 2: mover a destino, 3: bajar 10 studs
+
+    flyConnection = RunService:BindToRenderStep("FlyStep", 301, function()
+        if not flying or not hrp.Parent then
+            flying = false
+            RunService:UnbindFromRenderStep("FlyStep")
+            if bodyVelocity then bodyVelocity:Destroy() bodyVelocity=nil end
+            return
+        end
+
+        if stage == 1 then
+            local target = hrp.Position + Vector3.new(0,10,0)
+            local dir = (target - hrp.Position).Unit
+            local dist = (target - hrp.Position).Magnitude
+            if dist < 0.5 then
+                stage = 2
+            else
+                bodyVelocity.Velocity = dir * 59
+            end
+
+        elseif stage == 2 then
+            local target = Vector3.new(targetPos.X, hrp.Position.Y, targetPos.Z) + Vector3.new(0,10,0)
+            local dir = (target - hrp.Position).Unit
+            local dist = (target - hrp.Position).Magnitude
+            if dist < 0.5 then
+                stage = 3
+            else
+                bodyVelocity.Velocity = dir * 59
+            end
+
+        elseif stage == 3 then
+            local target = Vector3.new(targetPos.X, targetPos.Y, targetPos.Z)
+            local dir = (target - hrp.Position).Unit
+            local dist = (target - hrp.Position).Magnitude
+            if dist < 0.5 then
+                flying = false
+                RunService:UnbindFromRenderStep("FlyStep")
+                if bodyVelocity then bodyVelocity:Destroy() bodyVelocity=nil end
+                return
+            else
+                bodyVelocity.Velocity = dir * 59
+            end
+        end
+    end)
+end
+
+local function stopFly()
+    flying = false
+    if bodyVelocity then
+        bodyVelocity:Destroy()
+        bodyVelocity = nil
+    end
+    if flyConnection then
+        RunService:UnbindFromRenderStep("FlyStep")
+        flyConnection = nil
+    end
+end
+
+-- TP Forward con tween rápido para evitar detección
+local function TPForward()
+    local character = localPlayer.Character
+    if not character then return end
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    local direction = hrp.CFrame.LookVector
+    local targetPos = hrp.Position + direction * 4
+
+    local tweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Linear)
+    local tween = TweenService:Create(hrp, tweenInfo, {CFrame = CFrame.new(targetPos)})
+    tween:Play()
+    tween.Completed:Wait()
+end
+-- Toggle para Auto Fly (usar la posición guardada)
+local AutoFlyToggle = StealTab:CreateToggle({
+    Name = "Auto Fly to Saved Position",
     CurrentValue = false,
-    Flag = "AutoPunchToggle",
+    Flag = "AutoFlyToggle",
     Callback = function(value)
-        autoPunchEnabled = value
-        if autoPunchEnabled then
-            print("Auto Punch activado")
-            task.spawn(function()
-                while autoPunchEnabled do
-                    local now = tick()
-                    if now - lastPunchTime >= punchCooldown then
-                        lastPunchTime = now
-
-                        local character = localPlayer.Character
-                        if not character then
-                            task.wait(0.1)
-                            continue
-                        end
-
-                        local tool = localPlayer.Backpack:FindFirstChild("Bate") or character:FindFirstChild("Bate")
-                        if not tool or not tool:IsA("Tool") then
-                            print("No tienes equipado el bate.")
-                            task.wait(1)
-                            continue
-                        end
-
-                        local hrp = character:FindFirstChild("HumanoidRootPart")
-                        if not hrp then
-                            task.wait(0.1)
-                            continue
-                        end
-
-                        for _, player in pairs(Players:GetPlayers()) do
-                            if player ~= localPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                                local targetHRP = player.Character.HumanoidRootPart
-                                local dist = (hrp.Position - targetHRP.Position).Magnitude
-                                if dist <= punchRadius then
-                                    -- Aquí simulamos el golpe:
-                                    -- Si el bate tiene un RemoteEvent o función para golpear, puedes activarla acá.
-                                    -- Si no, una opción es crear un "touch" artificial:
-                                    if tool:FindFirstChild("Handle") then
-                                        tool.Handle.CFrame = targetHRP.CFrame
-                                        -- También puedes intentar activar el golpe con algún evento o función que tenga el bate
-                                        print("Golpeando a "..player.Name)
-                                    end
-                                end
-                            end
-                        end
-                    end
-                    task.wait(0.1)
-                end
-            end)
+        if value then
+            if savedPosition then
+                startFly(savedPosition)
+            else
+                print("No position saved yet!")
+            end
         else
-            print("Auto Punch desactivado")
+            stopFly()
         end
     end,
 })
 
--- ============================================================
--- PLAYER TAB
--- ============================================================
--- Infinite Health
-PlayerTab:CreateToggle({
-    Name = "Inf Health", CurrentValue = false, Flag = "InfHealth",
-    Callback = function(active)
+-- Botón para guardar posición actual
+StealTab:CreateButton({
+    Name = "Save Current Position",
+    Callback = function()
         local char = localPlayer.Character
         if not char then return end
-        local humanoid = char:FindFirstChildOfClass("Humanoid")
-        if not humanoid then return end
-        if active then
-            humanoid.Health = humanoid.MaxHealth
-            humanoid.HealthChanged:Connect(function() humanoid.Health = humanoid.MaxHealth end)
-        end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        savedPosition = hrp.Position
+        print("Position saved at: "..tostring(savedPosition))
     end,
 })
 
--- Godmode
-PlayerTab:CreateToggle({
-    Name = "Godmode", CurrentValue = false, Flag = "Godmode",
-    Callback = function(active)
-        local char = localPlayer.Character
-        if not char then return end
-        local humanoid = char:FindFirstChildOfClass("Humanoid")
-        if not humanoid then return end
-        if active then
-            humanoid.MaxHealth = math.huge; humanoid.Health = humanoid.MaxHealth
-            humanoid.HealthChanged:Connect(function() humanoid.Health = humanoid.MaxHealth end)
+-- Botón para volar a posición guardada (lanza vuelo cuando se precione)
+StealTab:CreateButton({
+    Name = "Fly to Saved Position",
+    Callback = function()
+        if savedPosition then
+            startFly(savedPosition)
         else
-            humanoid.MaxHealth = 100; humanoid.Health = 100
+            print("No position saved!")
         end
     end,
 })
 
--- ============================================================
--- CHARACTER MODIFICATION TAB
--- ============================================================
-local character = localPlayer.Character or localPlayer.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
-
--- Modify Health Max
-CharacterTab:CreateSlider({Name="Modificar Vida", Range={0,500}, Increment=10, Suffix="Vida", CurrentValue=humanoid.MaxHealth, Flag="HealthSlider",
-    Callback = function(val) humanoid.MaxHealth=val; humanoid.Health=val end
-})
-
--- Modify WalkSpeed
-CharacterTab:CreateSlider({Name="Modificar WalkSpeed", Range={0,100}, Increment=1, Suffix="Velocidad", CurrentValue=humanoid.WalkSpeed, Flag="SpeedSlider",
-    Callback = function(val) humanoid.WalkSpeed=val end
-})
-
--- Modify JumpPower
-CharacterTab:CreateSlider({Name="Modificar JumpPower", Range={0,200}, Increment=1, Suffix="Salto", CurrentValue=humanoid.JumpPower, Flag="JumpSlider",
-    Callback = function(val) humanoid.JumpPower=val end
-})
-
--- Add Accessory by ID
-CharacterTab:CreateInput({Name="ID de Accesorio", PlaceholderText="Pon el ID del accesorio", RemoveTextAfterFocusLost=false,
-    Callback = function(id)
-        local ok,Model = pcall(function() return game:GetService("InsertService"):LoadAsset(id) end)
-        if ok and Model then
-            local acc = Model:GetChildren()[1]
-            if acc then acc.Parent=character end
-        end
+-- Botón TP Forward
+StealTab:CreateButton({
+    Name = "TP Forward (Bypass)",
+    Callback = function()
+        TPForward()
     end,
 })
-
 -- ============================================================
 -- SCRIPTS TAB
 -- ============================================================
@@ -593,191 +505,7 @@ local Button = ScriptsTab:CreateButton({
 
     end,
 })
--- ============================================================
--- HERRAMIENTAS TAB
--- ============================================================
--- Give All Tools
-HerramientasTab:CreateButton({
-    Name = "Dar TODAS las herramientas",
-    Callback = function()
-        local backpack = localPlayer:WaitForChild("Backpack")
-        for _,c in pairs({ReplicatedStorage, game.StarterPack, Workspace}) do
-            for _,item in ipairs(c:GetDescendants()) do
-                if item:IsA("Tool") then
-                    item:Clone().Parent = backpack
-                end
-            end
-        end
-    end,
-})
 
--- Duplicate Equipped Tool
-HerramientasTab:CreateButton({Name="Duplicar herramienta equipada", Callback=function()
-    local char = localPlayer.Character
-    if char then
-        for _,tool in ipairs(char:GetChildren()) do
-            if tool:IsA("Tool") then tool:Clone().Parent=localPlayer.Backpack end
-        end
-    end
-end})
-
--- ============================================================
--- TROLEAR TAB
--- ============================================================
--- Install ResizePlayer System
-TrolearTab:CreateButton({Name="📦 Instalar ResizePlayer", Callback=function()
-    if not ReplicatedStorage:FindFirstChild("ResizePlayer") then
-        Instance.new("RemoteEvent").Name="ResizePlayer"; ReplicatedStorage.RemoteEvent.Parent=ReplicatedStorage
-    end
-    if not ServerScriptService:FindFirstChild("ResizePlayerScript") then
-        local src = [[
-            local RS = game:GetService("ReplicatedStorage")
-            local PS = game:GetService("Players")
-            RS:WaitForChild("ResizePlayer").OnServerEvent:Connect(function(_,name,scale)
-                local p=PS:FindFirstChild(name)
-                if p and p.Character then
-                    for _,d in ipairs(p.Character:GetDescendants()) do
-                        if d:IsA("BasePart") then d.Size *= scale end
-                    end
-                    local h=p.Character:FindFirstChildOfClass("Humanoid")
-                    if h then h.HipHeight*=scale; h:BuildRigFromAttachments() end
-                end
-            end)
-        ]]
-        local scr=Instance.new("Script"); scr.Name="ResizePlayerScript"; scr.Source=src; scr.Parent=ServerScriptService
-    end
-end})
-
--- Resize Buttons would go here after installation if desired
-
-
--- ============================================================
--- NUEVO: Herramienta de Edición de Bloques
--- ============================================================
-HerramientasTab:CreateButton({
-    Name = "BlockEditor Tool",
-    Callback = function()
-        local rs = ReplicatedStorage
-        local tool = rs:FindFirstChild("BlockEditorTool")
-        -- Si no existe, crearlo
-        if not tool then
-            tool = Instance.new("Tool")
-            tool.Name = "BlockEditorTool"
-            -- Handle
-            local handle = Instance.new("Part")
-            handle.Name = "Handle"
-            handle.Size = Vector3.new(1,1,1)
-            handle.Parent = tool
-            -- LocalScript para la lógica básica
-            local logic = Instance.new("LocalScript")
-            logic.Name = "BlockEditorScript"
-            logic.Source = [[
-    local tool = script.Parent
-    local player = game.Players.LocalPlayer
-    local mouse = player:GetMouse()
-    local selected
-    local selectionBox = Instance.new("SelectionBox")
-    selectionBox.LineThickness = 0.1
-    selectionBox.SurfaceTransparency = 0.5
-    selectionBox.Color3 = Color3.new(0, 1, 0)
-    -- Circles handles
-    local handles = {}
-    local function createHandle(position)
-        local part = Instance.new("Part")
-        part.Shape = Enum.PartType.Ball
-        part.Size = Vector3.new(0.5, 0.5, 0.5)
-        part.Anchored = true
-        part.CanCollide = false
-        part.Color = Color3.new(0, 1, 0)
-        part.Parent = workspace
-        part.CFrame = position
-        return part
-    end
-    local function showHandles(target)
-        for _, h in pairs(handles) do h:Destroy() end
-        handles = {}
-        local cf = target.CFrame
-        local size = target.Size
-        local corners = {
-            cf * CFrame.new(size.X/2, size.Y/2, size.Z/2),
-            cf * CFrame.new(-size.X/2, size.Y/2, size.Z/2),
-            cf * CFrame.new(size.X/2, size.Y/2, -size.Z/2),
-            cf * CFrame.new(-size.X/2, size.Y/2, -size.Z/2)
-        }
-        for _, pos in ipairs(corners) do
-            table.insert(handles, createHandle(pos))
-        end
-    end
-    mouse.Button2Down:Connect(function()
-        local target = mouse.Target
-        if target and target:IsA("BasePart") then
-            if selected then
-                selectionBox.Adornee = nil
-            end
-            selected = target
-            selectionBox.Adornee = selected
-            selectionBox.Parent = workspace
-            showHandles(selected)
-        end
-    end)
-    mouse.KeyDown:Connect(function(key)
-        if not selected then return end
-        key = key:lower()
-        if key == "s" then
-            -- scale uniformly by 10%
-            selected.Size = selected.Size * 1.1
-            selectionBox.Adornee = selected
-            showHandles(selected)
-        elseif key == "m" then
-            -- move upward by 1 stud
-            selected.CFrame = selected.CFrame * CFrame.new(0,1,0)
-            selectionBox.Adornee = selected
-            showHandles(selected)
-        end
-    end)
-]]
-            logic.Parent = tool
-            -- Poner en ReplicatedStorage
-            tool.Parent = rs
-            print("✅ BlockEditorTool creado en ReplicatedStorage")
-        end
-        -- Dar al jugador
-        local clone = tool:Clone()
-        clone.Parent = localPlayer:WaitForChild("Backpack")
-        print("✅ BlockEditorTool dado al jugador")
-    end,
-})
-
--- Inputs para nombre y escala
-TrolearTab:CreateInput({
-    Name = "👤 Nombre del jugador",
-    PlaceholderText = "Escribe el nombre exacto",
-    RemoveTextAfterFocusLost = false,
-    Callback = function(Value)
-        _G.ResizeTarget = Value
-    end,
-})
-
-TrolearTab:CreateInput({
-    Name = "📏 Escala (ej: 1.2)",
-    PlaceholderText = "Factor de escala",
-    RemoveTextAfterFocusLost = false,
-    Callback = function(Value)
-        _G.ResizeScale = tonumber(Value)
-    end,
-})
-
--- Botón para aplicar la escala
-TrolearTab:CreateButton({
-    Name = "✅ Aplicar Escala",
-    Callback = function()
-        if ReplicatedStorage:FindFirstChild("ResizePlayer") and _G.ResizeTarget and _G.ResizeScale then
-            ReplicatedStorage.ResizePlayer:FireServer(_G.ResizeTarget, _G.ResizeScale)
-        else
-            warn("Faltan datos o RemoteEvent no existe")
-        end
-    end
-})
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
