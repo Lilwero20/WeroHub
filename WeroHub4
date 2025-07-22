@@ -67,6 +67,7 @@ local Window = Rayfield:CreateWindow({
 })
 
 -- Tab Creation
+local StealTab = Window:CreateTab("Steal a Brainrot", 4483362458)
 local TeleportTab   = Window:CreateTab("Teleport", 4483362458)
 local PlayerTab     = Window:CreateTab("Player", 4483362458)
 local ScriptsTab    = Window:CreateTab("Scripts", 4483362458)
@@ -156,10 +157,13 @@ TeleportTab:CreateToggle({
 
                 local waypoints = {
                     Vector3.new(-55.3, 99.3, 743.4),
-                    Vector3.new(-23.9, 78.6, 8653),
+		    Vector3.new(-63.9, 97.4, 2592.5),
+		    Vector3.new(-53.8, 113, 4329.7),
+		    Vector3.new(-68.7, 92.9, 5842.8),
+                    Vector3.new(-45.2, 108.1, 8669.0),
                     Vector3.new(-44.1, -254.1, 8810.3),
                     Vector3.new(-55.9, -356.3, 9441.7),
-                    Vector3.new(-58,-370.1, 9498.2),
+                    Vector3.new(-56.9, -344.2, 9487.2),
                 }
 
                 local speed = 450
@@ -249,6 +253,34 @@ PlayerTab:CreateToggle({
 })
 
 -- ============================================================
+-- STEAL A BRAINROT TAB
+-- ============================================================
+
+local originalSpeed = humanoid.WalkSpeed
+
+StealTab:CreateToggle({
+    Name = "Speed 70 Toggle",
+    CurrentValue = false,
+    Flag = "Speed70Toggle",
+    Callback = function(active)
+        local character = localPlayer.Character
+        if not character then return end
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if not humanoid then return end
+
+        if active then
+            -- Guardar velocidad original para restaurar después
+            originalSpeed = humanoid.WalkSpeed
+            humanoid.WalkSpeed = 70
+            print("Speed 70 activated")
+        else
+            humanoid.WalkSpeed = originalSpeed or 16
+            print("Speed restored")
+        end
+    end,
+})
+
+-- ============================================================
 -- CHARACTER MODIFICATION TAB
 -- ============================================================
 local character = localPlayer.Character or localPlayer.CharacterAdded:Wait()
@@ -283,6 +315,42 @@ CharacterTab:CreateInput({Name="ID de Accesorio", PlaceholderText="Pon el ID del
 -- ============================================================
 -- SCRIPTS TAB
 -- ============================================================
+ScriptsTab:CreateButton({Name="Hoho Hub", Callback=function()
+print("Hoho Hub Executed")
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/acsu123/HOHO_H/main/Loading_UI"))()
+end})
+
+ScriptsTab:CreateButton({Name="Steal a Brainrot INSTANT", Callback=function()
+print("Steal a Brainrot Script Executed")
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/Youifpg/Steal-a-Brainrot-op/refs/heads/main/Arbixhub-obfuscated.lua"))()
+end})
+
+ScriptsTab:CreateButton({Name="Steal a Brainrot(Patched)", Callback=function()
+print("Steal a Brainrot Script Executed")
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/tienkhanh1/spicy/main/Chilli.lua"))()
+end})
+
+
+ScriptsTab:CreateButton({Name="Steal a Brainrot (Patched)", Callback=function()
+print("Steal a Brainrot Script Executed")
+    loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/fba54fa6e2751198c333f29d213065fc.lua"))()
+end})
+
+ScriptsTab:CreateButton({Name="Grow a Garden AutoMiddle Pets", Callback=function()
+print("Grow a Garden Script Executed")
+    loadstring(game:HttpGet(('https://raw.githubusercontent.com/FakeModz/LimitHub/refs/heads/main/LimitHub_Luarmor_E.lua')))()
+end})
+
+ScriptsTab:CreateButton({Name="Grow a Garden Inf Sprinkler", Callback=function()
+print("Grow a Garden Script Executed")
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/AhmadV99/Speed-Hub-X/main/Speed%20Hub%20X.lua", true))()
+end})
+
+ScriptsTab:CreateButton({Name="Grow a Garden", Callback=function()
+print("Grow a Garden Script Executed")
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/ArdyBotzz/NatHub/refs/heads/master/NatHub.lua"))()
+end})
+
 ScriptsTab:CreateButton({Name="Infinity yield", Callback=function()
 print("Infinity Yield Executed")
     loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
@@ -293,7 +361,17 @@ print("Dex Executed")
     loadstring(game:HttpGet("https://pastebin.com/raw/FeMbE4xS"))()
 end})
 
-ScriptsTab:CreateButton({Name="DeadRails", Callback=function()
+ScriptsTab:CreateButton({Name="DeadRailsBonds", Callback=function()
+print("DeadRails Script Executed")
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/thantzy/thanhub/refs/heads/main/thanv1"))()
+end})
+
+ScriptsTab:CreateButton({Name="DeadRailsBonds2", Callback=function()
+print("DeadRails Script Executed")
+    loadstring(game:HttpGet("https://getnative.cc/script/loader"))()
+end})
+
+ScriptsTab:CreateButton({Name="DeadRails3", Callback=function()
 print("DeadRails Script Executed")
     loadstring(game:HttpGet("https://raw.githubusercontent.com/gumanba/Scripts/main/DeadRails"))()
 end})
@@ -309,7 +387,7 @@ local Button = ScriptsTab:CreateButton({
 local Button = ScriptsTab:CreateButton({
     Name = "Blox Fruits Script",
     Callback = function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/realredz/BloxFruits/refs/heads/main/Source.lua"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/tlredz/Scripts/refs/heads/main/main.luau"))()
     end,
 })
 
@@ -555,7 +633,7 @@ end
 local AntiAFK_Connection
 
 -- Toggle Anti AFK en Rayfield
-TrolearTab:CreateToggle({
+MiscTab:CreateToggle({
     Name = "🛡️ Anti AFK",
     CurrentValue = false,
     Callback = function(Value)
@@ -700,6 +778,71 @@ MiscTab:CreateToggle({
 	end,
 })
 
+MiscTab:CreateToggle({
+    Name = "🕒 Mostrar hora actual en México",
+    CurrentValue = false,
+    Callback = function(Value)
+        local player = game.Players.LocalPlayer
+        local RunService = game:GetService("RunService")
+        local guiName = "HoraMexicoGUI"
+        local connection
 
--- End of WeroHub Script
+        if Value then
+            -- Crear GUI y TextLabel si no existe
+            local gui = player:FindFirstChild("PlayerGui"):FindFirstChild(guiName)
+            if not gui then
+                gui = Instance.new("ScreenGui")
+                gui.Name = guiName
+                gui.ResetOnSpawn = false
+                gui.Parent = player:WaitForChild("PlayerGui")
+            end
+
+            local label = gui:FindFirstChild("HoraLabel")
+            if not label then
+                label = Instance.new("TextLabel")
+                label.Name = "HoraLabel"
+                label.Size = UDim2.new(0, 300, 0, 30)
+                label.Position = UDim2.new(0, 10, 0, 10)
+                label.BackgroundColor3 = Color3.new(0, 0, 0)
+                label.BackgroundTransparency = 0.3
+                label.TextColor3 = Color3.new(1, 1, 1)
+                label.TextScaled = true
+                label.Font = Enum.Font.SourceSansBold
+                label.Text = "Hora de México: "
+                label.Parent = gui
+            end
+
+            label.Visible = true
+
+            -- Iniciar actualizador de hora
+            connection = RunService.RenderStepped:Connect(function()
+                local currentTime = os.date("!*t", os.time()) -- Obtiene hora UTC
+                -- Convertir la hora UTC a hora de México (zona horaria UTC -6)
+                currentTime.hour = currentTime.hour - 6
+                if currentTime.hour < 0 then
+                    currentTime.hour = currentTime.hour + 24
+                end
+                label.Text = string.format("Hora de México: %02d:%02d:%02d", currentTime.hour, currentTime.min, currentTime.sec)
+            end)
+
+            -- Guardar la conexión para desconectar luego
+            gui:SetAttribute("TimeConnection", connection)
+        else
+            local gui = player:FindFirstChild("PlayerGui"):FindFirstChild(guiName)
+            if gui then
+                local label = gui:FindFirstChild("HoraLabel")
+                if label then label:Destroy() end
+
+                local conn = gui:GetAttribute("TimeConnection")
+                if conn then
+                    pcall(function() conn:Disconnect() end)
+                end
+
+                gui:Destroy()
+            end
+        end
+    end,
+})
+
+
 -- End of WeroHub Script
