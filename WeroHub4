@@ -269,7 +269,7 @@ StealTab:CreateButton({
 })
 
 StealTab:CreateButton({
-	Name = "Volar a posición guardada",
+	Name = "Volar a posición guardada(Bypass)",
 	Callback = function()
 		local char = player.Character
 		if not savedPosition then
@@ -326,34 +326,32 @@ local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 
 StealTab:CreateButton({
-    Name = "Tp Forward (Bypass Pro)",
-    Callback = function()
-        local char = LocalPlayer.Character
-        if not char then return end
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if not hrp or not hum then return end
+	Name = "Tp Forward (Bypass)",
+	Callback = function()
+		local char = player.Character
+		if not char or not char:FindFirstChild("HumanoidRootPart") then return end
 
-        -- Guardar WalkSpeed original y setear uno más alto temporalmente
-        local originalSpeed = hum.WalkSpeed
-        hum.WalkSpeed = 59
+		local hrp = char:WaitForChild("HumanoidRootPart")
+		local humanoid = char:FindFirstChildWhichIsA("Humanoid")
+		if not humanoid then return end
 
-        -- Simular presión de tecla “W” moviéndose al frente por 0.2 segundos
-        local direction = hrp.CFrame.LookVector
-        local timeToMove = 0.2
-        local elapsed = 0
+		-- Bypass preparación
+		humanoid:ChangeState(Enum.HumanoidStateType.Seated)
+		task.wait(0.01)
 
-        local connection
-        connection = RunService.RenderStepped:Connect(function(dt)
-            elapsed += dt
-            if elapsed >= timeToMove then
-                connection:Disconnect()
-                hum.WalkSpeed = originalSpeed
-            else
-                hrp.Velocity = direction * hum.WalkSpeed
-            end
-        end)
-    end,
+		-- Calcular dirección
+		local cam = workspace.CurrentCamera
+		local lookVec = cam.CFrame.LookVector
+		local newPosition = hrp.Position + (lookVec.Unit * 4)
+
+		-- Anticheat evasión suave
+		local safeCFrame = CFrame.new(newPosition)
+		char:PivotTo(safeCFrame)
+		task.wait(0.01)
+
+		-- Restaurar estado
+		humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+	end
 })
 
 
