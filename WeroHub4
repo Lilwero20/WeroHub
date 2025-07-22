@@ -217,6 +217,49 @@ TeleportTab:CreateToggle({
     end,
 })
 
+local StealTab = Window:CreateTab("Steal a Brainrot", 4483362458)
+
+local RunService = game:GetService("RunService")
+local speedBypassActive = false
+local speedBypassConnection
+local SPEED_VALUE = 50
+
+StealTab:CreateToggle({
+    Name = "Speed 50 Bypass",
+    CurrentValue = false,
+    Flag = "Speed50Bypass",
+    Callback = function(state)
+        local character = localPlayer.Character or localPlayer.CharacterAdded:Wait()
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+
+        if not humanoid then return end
+
+        if state then
+            speedBypassActive = true
+            humanoid.WalkSpeed = SPEED_VALUE
+
+            -- Bucle que forza la velocidad constantemente
+            speedBypassConnection = RunService.Heartbeat:Connect(function()
+                pcall(function()
+                    if humanoid and humanoid.WalkSpeed ~= SPEED_VALUE then
+                        humanoid.WalkSpeed = SPEED_VALUE
+                    end
+                end)
+            end)
+        else
+            speedBypassActive = false
+
+            if speedBypassConnection then
+                speedBypassConnection:Disconnect()
+                speedBypassConnection = nil
+            end
+
+            -- Restaurar velocidad estándar
+            humanoid.WalkSpeed = 34
+        end
+    end,
+})
+
 -- ============================================================
 -- PLAYER TAB
 -- ============================================================
@@ -248,34 +291,6 @@ PlayerTab:CreateToggle({
             humanoid.HealthChanged:Connect(function() humanoid.Health = humanoid.MaxHealth end)
         else
             humanoid.MaxHealth = 100; humanoid.Health = 100
-        end
-    end,
-})
-
--- ============================================================
--- STEAL A BRAINROT TAB
--- ============================================================
-
-local originalSpeed = humanoid.WalkSpeed
-
-StealTab:CreateToggle({
-    Name = "Speed 70 Toggle",
-    CurrentValue = false,
-    Flag = "Speed70Toggle",
-    Callback = function(active)
-        local character = localPlayer.Character
-        if not character then return end
-        local humanoid = character:FindFirstChildOfClass("Humanoid")
-        if not humanoid then return end
-
-        if active then
-            -- Guardar velocidad original para restaurar después
-            originalSpeed = humanoid.WalkSpeed
-            humanoid.WalkSpeed = 70
-            print("Speed 70 activated")
-        else
-            humanoid.WalkSpeed = originalSpeed or 16
-            print("Speed restored")
         end
     end,
 })
@@ -846,3 +861,4 @@ MiscTab:CreateToggle({
 
 
 -- End of WeroHub Script
+
