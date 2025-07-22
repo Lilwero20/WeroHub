@@ -1,105 +1,98 @@
-local Players = game:GetService("Players")
+ocal Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
-
+local Players = game:GetService("Players")
 local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local hrp = character:WaitForChild("HumanoidRootPart")
-local humanoid = character:WaitForChild("Humanoid")
 
+-- Estado del toggle
+local speedBypassActive = false
+local speedConnection
 
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+-- Función para aplicar el speed bypass al personaje actual
+local function applySpeedBypass()
+	local character = player.Character or player.CharacterAdded:Wait()
+	local humanoid = character:WaitForChild("Humanoid")
 
+	-- Aplica velocidad deseada
+	humanoid.WalkSpeed = 60
+
+	-- Forzar constantemente
+	if speedConnection then speedConnection:Disconnect() end
+	speedConnection = RunService.RenderStepped:Connect(function()
+		if humanoid and humanoid.WalkSpeed < 60 then
+			humanoid.WalkSpeed = 60
+		end
+	end)
+end
+
+-- Función para desactivar bypass
+local function removeSpeedBypass()
+	local character = player.Character
+	if character then
+		local humanoid = character:FindFirstChild("Humanoid")
+		if humanoid then humanoid.WalkSpeed = 34 end
+	end
+	if speedConnection then speedConnection:Disconnect() end
+end
+
+-- Restaurar bypass si mueres
+player.CharacterAdded:Connect(function()
+	task.wait(1) -- Esperar a que se cargue bien
+	if speedBypassActive then
+		applySpeedBypass()
+	end
+end)
+
+-- Crear Rayfield GUI
 local Window = Rayfield:CreateWindow({
-   Name = "WeroHub Steal a Brainrot",
-   Icon = 0, -- Icon in Topbar. Can use Lucide Icons (string) or Roblox Image (number). 0 to use no icon (default).
-   LoadingTitle = "WeroHub Steal a Brainrot Script",
-   LoadingSubtitle = "by WeroScripts",
-   ShowText = "Rayfield", -- for mobile users to unhide rayfield, change if you'd like
-   Theme = "Default", -- Check https://docs.sirius.menu/rayfield/configuration/themes
-
-   ToggleUIKeybind = "K", -- The keybind to toggle the UI visibility (string like "K" or Enum.KeyCode)
-
-   DisableRayfieldPrompts = false,
-   DisableBuildWarnings = false, -- Prevents Rayfield from warning when the script has a version mismatch with the interface
-
-   ConfigurationSaving = {
-      Enabled = true,
-      FolderName = nil, -- Create a custom folder for your hub/game
-      FileName = "Big Hub"
-   },
-
-   Discord = {
-      Enabled = false, -- Prompt the user to join your Discord server if their executor supports it
-      Invite = "noinvitelink", -- The Discord invite code, do not include discord.gg/. E.g. discord.gg/ ABCD would be ABCD
-      RememberJoins = true -- Set this to false to make them join the discord every time they load it up
-   },
-
-   KeySystem = false, -- Set this to true to use our key system
-   KeySettings = {
-      Title = "Untitled",
-      Subtitle = "Key System",
-      Note = "No method of obtaining the key is provided", -- Use this to tell the user how to get a key
-      FileName = "Key", -- It is recommended to use something unique as other scripts using Rayfield may overwrite your key file
-      SaveKey = true, -- The user's key will be saved, but if you change the key, they will be unable to use your script
-      GrabKeyFromSite = false, -- If this is true, set Key below to the RAW site you would like Rayfield to get the key from
-      Key = {"Hello"} -- List of keys that will be accepted by the system, can be RAW file links (pastebin, github etc) or simple strings ("hello","key22")
-   }
+	Name = "WeroHub",
+	LoadingTitle = "WeroHub",
+	LoadingSubtitle = "Cargando funcionalidades...",
+	ConfigurationSaving = {
+		Enabled = false
+	},
+	Discord = {
+		Enabled = false
+	},
+	KeySystem = false,
 })
 
 local Tab = Window:CreateTab("TP y Bypass", 4483362458)
 
--- 🔘 Toggle Velocidad
+-- Toggle de velocidad
 Tab:CreateToggle({
-    Name = "Speed Bypass (60)",
-    CurrentValue = false,
-    Callback = function(Value)
-        local char = player.Character or player.CharacterAdded:Wait()
-        local humanoid = char:WaitForChild("Humanoid")
-
-        if Value then
-            -- Activar velocidad con bypass
-            humanoid.WalkSpeed = 60
-
-            -- Loop de seguridad para mantener velocidad
-            if _G.SpeedBypass then _G.SpeedBypass:Disconnect() end
-            _G.SpeedBypass = game:GetService("RunService").RenderStepped:Connect(function()
-                pcall(function()
-                    if humanoid.WalkSpeed < 60 then
-                        humanoid.WalkSpeed = 60
-                    end
-                end)
-            end)
-        else
-            -- Desactivar velocidad y restaurar
-            humanoid.WalkSpeed = 34
-            if _G.SpeedBypass then _G.SpeedBypass:Disconnect() end
-        end
-    end,
+	Name = "Speed Bypass (60)",
+	CurrentValue = false,
+	Callback = function(Value)
+		speedBypassActive = Value
+		if Value then
+			applySpeedBypass()
+		else
+			removeSpeedBypass()
+		end
+	end,
 })
 
--- 🔘 Botón Instant Steal
+-- Botón de TP
 Tab:CreateButton({
-    Name = "Instant Steal (TP arriba)",
-    Callback = function()
-        local character = player.Character or player.CharacterAdded:Wait()
-        local hrp = character:WaitForChild("HumanoidRootPart")
-        local currentPosition = hrp.Position
+	Name = "Instant Steal (TP arriba)",
+	Callback = function()
+		local character = player.Character or player.CharacterAdded:Wait()
+		local hrp = character:WaitForChild("HumanoidRootPart")
+		local currentPosition = hrp.Position
 
-        -- Paso 1: subir 10 studs
-        local upPosition = currentPosition + Vector3.new(0, 10, 0)
-        hrp.CFrame = CFrame.new(upPosition)
-        task.wait(0.05)
+		-- Subir y bajar en pasos
+		local up = currentPosition + Vector3.new(0, 10, 0)
+		hrp.CFrame = CFrame.new(up)
+		task.wait(0.05)
 
-        -- Paso 2: TP más arriba
-        local targetPosition = currentPosition + Vector3.new(0, 50, 0)
-        hrp.CFrame = CFrame.new(targetPosition)
-        task.wait(0.05)
+		local high = currentPosition + Vector3.new(0, 50, 0)
+		hrp.CFrame = CFrame.new(high)
+		task.wait(0.05)
 
-        -- Paso 3: Bajar 10 studs simulando aterrizaje
-        local finalPosition = targetPosition - Vector3.new(0, 10, 0)
-        local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Linear)
-        local tween = TweenService:Create(hrp, tweenInfo, {CFrame = CFrame.new(finalPosition)})
-        tween:Play()
-    end,
+		local down = high - Vector3.new(0, 10, 0)
+		local tween = TweenService:Create(hrp, TweenInfo.new(0.3, Enum.EasingStyle.Linear), {CFrame = CFrame.new(down)})
+		tween:Play()
+	end,
 })
