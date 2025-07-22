@@ -1,8 +1,11 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local hrp = character:WaitForChild("HumanoidRootPart")
+local humanoid = character:WaitForChild("Humanoid")
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
@@ -21,6 +24,11 @@ local Window = Rayfield:CreateWindow({
 
 local Tab = Window:CreateTab("Main")
 
+-- Variables para speed toggle
+local SPEED_VALUE = 60
+local originalWalkSpeed = 34
+local speedBypassConnection
+
 -- Variables ESP
 local espFolder = Instance.new("Folder")
 espFolder.Name = "ESPFolder"
@@ -31,7 +39,32 @@ local ESPs = {}
 local AUTO_PUNCH_ENABLED = false
 local TUNG_BAT_NAME = "Tung Bat"
 
--- Función ESP
+-- Variables para posición guardada
+local savedPosition = nil
+
+-- Función para setear speed con bypass
+local function setSpeed(speed)
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+
+    if speedBypassConnection then speedBypassConnection:Disconnect() speedBypassConnection = nil end
+
+    if speed == SPEED_VALUE then
+        humanoid.WalkSpeed = SPEED_VALUE
+        speedBypassConnection = RunService.Heartbeat:Connect(function()
+            pcall(function()
+                if humanoid and humanoid.WalkSpeed ~= SPEED_VALUE then
+                    humanoid.WalkSpeed = SPEED_VALUE
+                end
+            end)
+        end)
+    else
+        humanoid.WalkSpeed = originalWalkSpeed
+    end
+end
+
+-- Funciones ESP
 local function createESPForPlayer(targetPlayer)
     if targetPlayer == player then return end
     local character = targetPlayer.Character
@@ -41,7 +74,6 @@ local function createESPForPlayer(targetPlayer)
 
     if ESPs[targetPlayer] then return end
 
-    -- Highlight
     local highlight = Instance.new("Highlight")
     highlight.Name = "ESPHighlight"
     highlight.Adornee = character
@@ -49,7 +81,6 @@ local function createESPForPlayer(targetPlayer)
     highlight.OutlineColor = Color3.new(1, 1, 1)
     highlight.Parent = espFolder
 
-    -- BillboardGui con nombre
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "ESPName"
     billboard.Adornee = head
@@ -89,7 +120,6 @@ local function updateESP()
     for targetPlayer, esp in pairs(ESPs) do
         local character = targetPlayer.Character
         if character and character.Parent then
-            -- Forzar transparencia 0 para que no sean invisibles (bypass invisibilidad)
             for _, part in pairs(character:GetChildren()) do
                 if part:IsA("BasePart") then
                     part.LocalTransparencyModifier = 0
@@ -101,7 +131,6 @@ local function updateESP()
     end
 end
 
--- Conectar eventos ESP
 Players.PlayerAdded:Connect(function(plr)
     plr.CharacterAdded:Connect(function()
         wait(0.5)
@@ -130,7 +159,6 @@ local function tryAutoPunch()
     local hrp = character:FindFirstChild("HumanoidRootPart")
     if not humanoid or not hrp then return end
 
-    -- Verificar si tienes Tung Bat equipado
     local tool = player.Character:FindFirstChildOfClass("Tool")
     if not tool or tool.Name ~= TUNG_BAT_NAME then return end
 
@@ -139,21 +167,13 @@ local function tryAutoPunch()
             local targetHRP = targetPlayer.Character.HumanoidRootPart
             local distance = (hrp.Position - targetHRP.Position).Magnitude
             if distance <= 10 then
-                -- Ejecutar golpe (trigger al evento de la tool)
-                -- Esto depende de cómo esté programada la herramienta,
-                -- usualmente es un RemoteEvent o función que se dispara al atacar
-                -- Como ejemplo, vamos a activar la herramienta y "click" si tiene evento 'Activate'
-
-                if tool:FindFirstChild("RemoteEvent") then
-                    -- Algunos juegos usan RemoteEvent para golpes
-                    tool.RemoteEvent:FireServer(targetPlayer)
-                elseif tool:FindFirstChildWhichIsA("RemoteEvent") then
-                    tool:FindFirstChildWhichIsA("RemoteEvent"):FireServer(targetPlayer)
+                -- Intentamos disparar el RemoteEvent si existe (mejor que Activate)
+                local remote = tool:FindFirstChildWhichIsA("RemoteEvent")
+                if remote then
+                    remote:FireServer(targetPlayer)
                 else
-                    -- Como fallback, intentar activar la tool para hacer el golpe normal
                     tool:Activate()
                 end
-                -- Solo golpeamos a uno por frame para no saturar
                 break
             end
         end
@@ -163,12 +183,33 @@ end
 RunService.Heartbeat:Connect(tryAutoPunch)
 RunService.Heartbeat:Connect(updateESP)
 
--- Crear toggles en Rayfield
+-- Función bypass teletransporte a la posición guardada
+local function bypassTeleport(targetPos)
+    if not hrp or not targetPos then return end
+    -- Teletransporta arriba 50 studs
+    local upPos = hrp.Position + Vector3.new(0, 50, 0)
+    hrp.CFrame = CFrame.new(upPos)
+    wait(0.15)
+    -- Tween para bajar suavemente a targetPos + 3 studs arriba
+    local tween = TweenService:Create(hrp, TweenInfo.new(0.5, Enum.EasingStyle.Linear), {CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0))})
+    tween:Play()
+    tween.Completed:Wait()
+end
+
+-- Toggles y botones Rayfield
+Tab:CreateToggle({
+    Name = "Speed 60 Bypass",
+    CurrentValue = false,
+    Flag = "SpeedToggle",
+    Callback = function(value)
+        setSpeed(value and SPEED_VALUE or originalWalkSpeed)
+    end,
+})
 
 Tab:CreateToggle({
     Name = "ESP Players",
     CurrentValue = false,
-    Flag = "ToggleESP",
+    Flag = "ESPToggle",
     Callback = function(value)
         if value then
             for _, plr in pairs(Players:GetPlayers()) do
@@ -187,8 +228,46 @@ Tab:CreateToggle({
 Tab:CreateToggle({
     Name = "Auto Tung Bat Punch (10 studs)",
     CurrentValue = false,
-    Flag = "ToggleAutoTungBat",
+    Flag = "AutoTungBatToggle",
     Callback = function(value)
         AUTO_PUNCH_ENABLED = value
     end,
 })
+
+-- Botón para guardar posición
+Tab:CreateButton({
+    Name = "Guardar Posición",
+    Callback = function()
+        if hrp then
+            savedPosition = hrp.Position
+            Rayfield:Notify({
+                Title = "Posición guardada",
+                Content = "Se guardó tu posición actual.",
+                Duration = 3
+            })
+        end
+    end,
+})
+
+-- Botón para teleportear con bypass a la posición guardada
+Tab:CreateButton({
+    Name = "Bypass Teletransportar a posición",
+    Callback = function()
+        if savedPosition then
+            bypassTeleport(savedPosition)
+            Rayfield:Notify({
+                Title = "Teletransportado",
+                Content = "Has sido teletransportado a la posición guardada.",
+                Duration = 3
+            })
+        else
+            Rayfield:Notify({
+                Title = "Error",
+                Content = "No tienes una posición guardada.",
+                Duration = 3
+            })
+        end
+    end,
+})
+
+
