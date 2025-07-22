@@ -14,6 +14,8 @@ local boostedWalkSpeed = 60
 local speedToggle = false
 local spawnPos = hrp.Position
 
+local antiRagdollToggle = false
+
 -- Crear ScreenGui para los botones (padre de los botones)
 local playerGui = player:WaitForChild("PlayerGui")
 local screenGui = Instance.new("ScreenGui")
@@ -63,7 +65,6 @@ local function flyToPosition(targetPos)
     local flying = true
     
     local stage = 1
-    local stageTimer = 0
     
     RunService:BindToRenderStep("FlyBypass", 301, function()
         if not flying or not hrp or not hrp.Parent then
@@ -112,6 +113,19 @@ local function instantTPUp()
     local targetPos = hrp.Position + Vector3.new(0,50,0)
     local tween = TweenService:Create(hrp, TweenInfo.new(0.15, Enum.EasingStyle.Linear), {CFrame = CFrame.new(targetPos)})
     tween:Play()
+end
+
+-- Función Anti Ragdoll
+local function antiRagdoll()
+    if humanoid then
+        -- Cancela PlatformStand y Sit para evitar ragdoll o estar tumbado
+        if humanoid.PlatformStand then
+            humanoid.PlatformStand = false
+        end
+        if humanoid.Sit then
+            humanoid.Sit = false
+        end
+    end
 end
 
 -- Crear ventana y pestaña Rayfield
@@ -174,6 +188,16 @@ Tab:CreateToggle({
     end
 })
 
+-- Toggle Anti Ragdoll
+Tab:CreateToggle({
+    Name = "Anti Ragdoll",
+    CurrentValue = false,
+    Flag = "AntiRagdollToggle",
+    Callback = function(value)
+        antiRagdollToggle = value
+    end
+})
+
 -- Eventos de botones
 flyButton.MouseButton1Click:Connect(function()
     flyToPosition(spawnPos)
@@ -181,4 +205,11 @@ end)
 
 instantTPButton.MouseButton1Click:Connect(function()
     instantTPUp()
+end)
+
+-- Loop que chequea estado Anti Ragdoll
+RunService.Heartbeat:Connect(function()
+    if antiRagdollToggle then
+        antiRagdoll()
+    end
 end)
