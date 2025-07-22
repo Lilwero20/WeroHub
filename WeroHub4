@@ -364,6 +364,74 @@ StealTab:CreateButton({
 	end,
 })
 
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local localPlayer = Players.LocalPlayer
+
+local autoPunchEnabled = false
+local punchRadius = 10
+local punchCooldown = 0.5
+
+local lastPunchTime = 0
+
+StealTab:CreateToggle({
+    Name = "Auto Punch",
+    CurrentValue = false,
+    Flag = "AutoPunchToggle",
+    Callback = function(value)
+        autoPunchEnabled = value
+        if autoPunchEnabled then
+            print("Auto Punch activado")
+            task.spawn(function()
+                while autoPunchEnabled do
+                    local now = tick()
+                    if now - lastPunchTime >= punchCooldown then
+                        lastPunchTime = now
+
+                        local character = localPlayer.Character
+                        if not character then
+                            task.wait(0.1)
+                            continue
+                        end
+
+                        local tool = localPlayer.Backpack:FindFirstChild("Bate") or character:FindFirstChild("Bate")
+                        if not tool or not tool:IsA("Tool") then
+                            print("No tienes equipado el bate.")
+                            task.wait(1)
+                            continue
+                        end
+
+                        local hrp = character:FindFirstChild("HumanoidRootPart")
+                        if not hrp then
+                            task.wait(0.1)
+                            continue
+                        end
+
+                        for _, player in pairs(Players:GetPlayers()) do
+                            if player ~= localPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                                local targetHRP = player.Character.HumanoidRootPart
+                                local dist = (hrp.Position - targetHRP.Position).Magnitude
+                                if dist <= punchRadius then
+                                    -- Aquí simulamos el golpe:
+                                    -- Si el bate tiene un RemoteEvent o función para golpear, puedes activarla acá.
+                                    -- Si no, una opción es crear un "touch" artificial:
+                                    if tool:FindFirstChild("Handle") then
+                                        tool.Handle.CFrame = targetHRP.CFrame
+                                        -- También puedes intentar activar el golpe con algún evento o función que tenga el bate
+                                        print("Golpeando a "..player.Name)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                    task.wait(0.1)
+                end
+            end)
+        else
+            print("Auto Punch desactivado")
+        end
+    end,
+})
 
 -- ============================================================
 -- PLAYER TAB
