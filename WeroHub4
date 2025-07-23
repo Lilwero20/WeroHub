@@ -115,7 +115,7 @@ flyTab:CreateToggle({
 
             local originalJumpPower = humanoid.JumpPower
             humanoid.JumpPower = 150 -- salto super alto (~50 studs)
-            humanoid.WalkSpeed = 16 -- velocidad normal
+            humanoid.WalkSpeed = 60 -- velocidad normal
 
             humanoid:MoveTo(savedPosition)
 
@@ -134,7 +134,7 @@ flyTab:CreateToggle({
 
             -- Restaurar valores
             humanoid.JumpPower = originalJumpPower
-            humanoid.WalkSpeed = 16
+            humanoid.WalkSpeed = 60
 
             Rayfield:Notify({
                 Title = "WeroHub",
@@ -144,7 +144,7 @@ flyTab:CreateToggle({
         else
             isMovingAndJumping = false
             humanoid.JumpPower = 50 -- Valor normal, ajusta si quieres
-            humanoid.WalkSpeed = 16
+            humanoid.WalkSpeed = 60
         end
     end,
 })
