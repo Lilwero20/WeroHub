@@ -60,21 +60,6 @@ Tab:CreateToggle({
     end,
 })
 
--- Mostrar/Ocultar botón Fly to Spawn
-local flyButtonToggle = false
-Tab:CreateToggle({
-    Name = "Mostrar Botón Fly to Spawn",
-    CurrentValue = false,
-    Flag = "FlyButtonToggle",
-    Callback = function(value)
-        flyButtonToggle = value
-        flyButton.Visible = flyButtonToggle
-        if flyButtonToggle then
-            spawnPos = hrp.Position -- Actualiza spawnPos
-        end
-    end,
-})
-
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
@@ -100,9 +85,9 @@ flyTab:CreateButton({
     end,
 })
 
--- Toggle para caminar y saltar alto al destino
+-- Toggle para caminar rápido y saltar alto al destino
 flyTab:CreateToggle({
-    Name = "Walk & Super High Jump to Saved Pos",
+    Name = "Walk & High Jump (60 studs/s, 50 studs jump)",
     CurrentValue = false,
     Flag = "WalkHighJumpToggle",
     Callback = function(enabled)
@@ -114,12 +99,14 @@ flyTab:CreateToggle({
             isMovingAndJumping = true
 
             local originalJumpPower = humanoid.JumpPower
-            humanoid.JumpPower = 150 -- salto super alto (~50 studs)
-            humanoid.WalkSpeed = 60 -- velocidad normal
+            local originalWalkSpeed = humanoid.WalkSpeed
+
+            humanoid.JumpPower = 150 -- salto ~50 studs
+            humanoid.WalkSpeed = 60 -- velocidad rápida
 
             humanoid:MoveTo(savedPosition)
 
-            -- Detectar cada vez que toque el suelo y saltar
+            -- Evento para saltar al pisar suelo
             local floorConnection
             floorConnection = humanoid:GetPropertyChangedSignal("FloorMaterial"):Connect(function()
                 if humanoid.FloorMaterial ~= Enum.Material.Air and isMovingAndJumping then
@@ -127,14 +114,14 @@ flyTab:CreateToggle({
                 end
             end)
 
+            -- Esperar a que termine el movimiento
             humanoid.MoveToFinished:Wait()
             isMovingAndJumping = false
 
+            -- Desconectar evento y restaurar valores
             floorConnection:Disconnect()
-
-            -- Restaurar valores
             humanoid.JumpPower = originalJumpPower
-            humanoid.WalkSpeed = 60
+            humanoid.WalkSpeed = originalWalkSpeed
 
             Rayfield:Notify({
                 Title = "WeroHub",
@@ -143,9 +130,8 @@ flyTab:CreateToggle({
             })
         else
             isMovingAndJumping = false
-            humanoid.JumpPower = 50 -- Valor normal, ajusta si quieres
-            humanoid.WalkSpeed = 60
+            humanoid.JumpPower = 50 -- valor por defecto
+            humanoid.WalkSpeed = 16 -- valor normal
         end
     end,
 })
-
