@@ -24,17 +24,36 @@ Tab:CreateToggle({
         local backpack = player:WaitForChild("Backpack")
         local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 
-        -- Buscar el Speed Coil en el juego
+        -- Función para intentar comprar el Speed Coil automáticamente
+        local function tryPurchaseSpeedCoil()
+            local replicatedStorage = game:GetService("ReplicatedStorage")
+
+            -- Buscar RemoteEvent o función relacionada con la tienda
+            for _, v in pairs(replicatedStorage:GetDescendants()) do
+                if v:IsA("RemoteEvent") or v:IsA("RemoteFunction") then
+                    if v.Name:lower():find("buy") or v.Name:lower():find("shop") or v.Name:lower():find("purchase") then
+                        pcall(function()
+                            v:FireServer("Speed Coil")
+                        end)
+                    end
+                end
+            end
+        end
+
+        -- Buscar el Speed Coil
         local function findSpeedCoil()
-            -- Buscar en la mochila
             local tool = backpack:FindFirstChild("Speed Coil")
             if not tool then
-                -- Buscar en ReplicatedStorage si hay una tienda
                 local replicatedStorage = game:GetService("ReplicatedStorage")
                 local item = replicatedStorage:FindFirstChild("Speed Coil")
                 if item and item:IsA("Tool") then
                     tool = item:Clone()
                     tool.Parent = backpack
+                else
+                    -- Intentar comprar si no existe
+                    tryPurchaseSpeedCoil()
+                    task.wait(1) -- esperar a que llegue al Backpack si se compró
+                    tool = backpack:FindFirstChild("Speed Coil")
                 end
             end
             return tool
