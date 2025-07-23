@@ -403,3 +403,78 @@ player.CharacterAdded:Connect(function(char)
         end)
     end
 end)
+
+Tab:CreateToggle({
+    Name = "Eliminar Anti-Cheats por código",
+    CurrentValue = false,
+    Flag = "DeepAntiCheatRemover",
+    Callback = function(state)
+        if not state then return end
+
+        local keywords = {
+            "kick",
+            "ban",
+            "exploit",
+            "detected",
+            "WalkSpeed = 0",
+            "JumpPower = 0",
+            "Humanoid.Health = 0",
+            "UserInputService.InputBegan",
+            "IsA(\"Exploit\")",
+            "RemoteEvent",
+            "RemoteFunction",
+            "report",
+            "LogService",
+            "CheckCaller",
+            "is_synapse_function",
+            "getconnections",
+            "hookfunction",
+            "detect",
+            "AntiCheat",
+            "require(",
+        }
+
+        local function containsAntiCheatCode(scriptInstance)
+            local success, result = pcall(function()
+                return scriptInstance.Source
+            end)
+            if success and typeof(result) == "string" then
+                local lowerCode = result:lower()
+                for _, keyword in ipairs(keywords) do
+                    if lowerCode:find(keyword:lower()) then
+                        return true
+                    end
+                end
+            end
+            return false
+        end
+
+        local function scanAndRemove(parent)
+            for _, obj in ipairs(parent:GetDescendants()) do
+                if obj:IsA("LocalScript") or obj:IsA("ModuleScript") or obj:IsA("Script") then
+                    if containsAntiCheatCode(obj) then
+                        print("🛑 Eliminando posible anti-cheat:", obj:GetFullName())
+                        obj:Destroy()
+                    end
+                end
+            end
+        end
+
+        -- Lugares comunes donde pueden estar
+        local servicesToScan = {
+            game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui"),
+            game:GetService("ReplicatedFirst"),
+            game:GetService("StarterGui"),
+            game:GetService("Workspace"),
+            game:GetService("Lighting"),
+            game:GetService("ReplicatedStorage"),
+            game:GetService("StarterPlayer"),
+        }
+
+        for _, service in pairs(servicesToScan) do
+            scanAndRemove(service)
+        end
+
+        print("✅ Escaneo completo.")
+    end,
+})
