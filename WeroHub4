@@ -16,63 +16,106 @@ local Window = Rayfield:CreateWindow({
 local Tab = Window:CreateTab("Speed", 4483362458)
 
 Tab:CreateToggle({
-    Name = "Speed Boost (Speed Coil)",
+    Name = "Speed 60 Bypass(Buy SpeedCoil Equip and Unequip for no problems)",
     CurrentValue = false,
-    Flag = "SpeedCoilToggle",
-    Callback = function(state)
-        local player = game.Players.LocalPlayer
-        local backpack = player:WaitForChild("Backpack")
-        local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+    Flag = "SpeedToggle",
+    Callback = function(value)
+        local char = player.Character or player.CharacterAdded:Wait()
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if not hum then return end
 
-        -- Función para intentar comprar el Speed Coil automáticamente
-        local function tryPurchaseSpeedCoil()
-            local replicatedStorage = game:GetService("ReplicatedStorage")
+        speedToggle = value
 
-            -- Buscar RemoteEvent o función relacionada con la tienda
-            for _, v in pairs(replicatedStorage:GetDescendants()) do
-                if v:IsA("RemoteEvent") or v:IsA("RemoteFunction") then
-                    if v.Name:lower():find("buy") or v.Name:lower():find("shop") or v.Name:lower():find("purchase") then
-                        pcall(function()
-                            v:FireServer("Speed Coil")
-                        end)
-                    end
-                end
-            end
-        end
-
-        -- Buscar el Speed Coil
-        local function findSpeedCoil()
-            local tool = backpack:FindFirstChild("Speed Coil")
-            if not tool then
-                local replicatedStorage = game:GetService("ReplicatedStorage")
-                local item = replicatedStorage:FindFirstChild("Speed Coil")
-                if item and item:IsA("Tool") then
-                    tool = item:Clone()
-                    tool.Parent = backpack
-                else
-                    -- Intentar comprar si no existe
-                    tryPurchaseSpeedCoil()
-                    task.wait(1) -- esperar a que llegue al Backpack si se compró
-                    tool = backpack:FindFirstChild("Speed Coil")
-                end
-            end
-            return tool
-        end
-
-        if state then
-            local coil = findSpeedCoil()
-            if coil and humanoid then
-                humanoid:EquipTool(coil)
-                task.delay(0.5, function()
-                    if humanoid and coil then
-                        humanoid:UnequipTools()
+        if value then
+            hum.WalkSpeed = boostedWalkSpeed
+            speedBypassConnection = RunService.Heartbeat:Connect(function()
+                pcall(function()
+                    if hum and hum.WalkSpeed ~= boostedWalkSpeed then
+                        hum.WalkSpeed = boostedWalkSpeed
                     end
                 end)
-            end
+            end)
         else
-            if humanoid then
-                humanoid:UnequipTools()
+            if speedBypassConnection then
+                speedBypassConnection:Disconnect()
+                speedBypassConnection = nil
             end
+            hum.WalkSpeed = originalWalkSpeed
+        end
+    end,
+})
+
+local savedPosition = nil
+local flying = false
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local hrp = character:WaitForChild("HumanoidRootPart")
+
+local flyTab = Window:CreateTab("TP/Fly", 4483362458)
+
+-- Botón para guardar posición
+flyTab:CreateButton({
+    Name = "Save Position",
+    Callback = function()
+        savedPosition = hrp.Position
+        Rayfield:Notify({
+            Title = "WeroHub",
+            Content = "¡Posición guardada correctamente!",
+            Duration = 3
+        })
+    end,
+})
+
+-- Toggle para volar a la posición guardada
+flyTab:CreateToggle({
+    Name = "Fly to Saved Pos",
+    CurrentValue = false,
+    Flag = "FlyToSavedPos",
+    Callback = function(enabled)
+        flying = enabled
+
+        if flying and savedPosition then
+            -- Elevar al cielo
+            local upTween = TweenService:Create(hrp, TweenInfo.new(0.4, Enum.EasingStyle.Sine), { Position = hrp.Position + Vector3.new(0, 10, 0) })
+            upTween:Play()
+            upTween.Completed:Wait()
+
+            -- Bypass detección (reduce fricción)
+            humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+            humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+            character:FindFirstChildOfClass("Humanoid").PlatformStand = true
+
+            -- Calcular duración del vuelo
+            local distance = (Vector3.new(savedPosition.X, hrp.Position.Y, savedPosition.Z) - hrp.Position).Magnitude
+            local speed = 56
+            local time = distance / speed
+
+            -- Tween horizontal
+            local moveTween = TweenService:Create(hrp, TweenInfo.new(time, Enum.EasingStyle.Linear), {
+                Position = Vector3.new(savedPosition.X, hrp.Position.Y, savedPosition.Z)
+            })
+            moveTween:Play()
+            moveTween.Completed:Wait()
+
+            -- Bajar 10 studs
+            local downTween = TweenService:Create(hrp, TweenInfo.new(0.4, Enum.EasingStyle.Sine), { Position = savedPosition })
+            downTween:Play()
+            downTween.Completed:Wait()
+
+            -- Restaurar controles
+            character:FindFirstChildOfClass("Humanoid").PlatformStand = false
+            humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
+            humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
+
+            Rayfield:Notify({
+                Title = "WeroHub",
+                Content = "Has sido transportado con éxito 🛩️",
+                Duration = 3
+            })
         end
     end,
 })
