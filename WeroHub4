@@ -1,3 +1,12 @@
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local hrp = character:WaitForChild("HumanoidRootPart")
+local humanoid = character:WaitForChild("Humanoid")
+
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Window = Rayfield:CreateWindow({
@@ -13,8 +22,14 @@ local Window = Rayfield:CreateWindow({
     KeySystem = false
 })
 
+local originalWalkSpeed = 34
+local boostedWalkSpeed = 60
+local speedBypassConnection
+local speedToggle = false
+
 local Tab = Window:CreateTab("Speed", 4483362458)
 
+-- Speed bypass toggle
 Tab:CreateToggle({
     Name = "Speed 60 Bypass(Buy SpeedCoil Equip and Unequip for no problems)",
     CurrentValue = false,
@@ -45,16 +60,30 @@ Tab:CreateToggle({
     end,
 })
 
+-- Mostrar/Ocultar botón Fly to Spawn
+local flyButtonToggle = false
+Tab:CreateToggle({
+    Name = "Mostrar Botón Fly to Spawn",
+    CurrentValue = false,
+    Flag = "FlyButtonToggle",
+    Callback = function(value)
+        flyButtonToggle = value
+        flyButton.Visible = flyButtonToggle
+        if flyButtonToggle then
+            spawnPos = hrp.Position -- Actualiza spawnPos
+        end
+    end,
+})
+
 local Players = game:GetService("Players")
+local player = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 
-local player = Players.LocalPlayer
+local savedPosition = nil
+local isMovingAndJumping = false
+
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
-local hrp = character:WaitForChild("HumanoidRootPart")
-
-local savedPosition = nil
-local isWalkingAndJumping = false
 
 local flyTab = Window:CreateTab("TP/Fly", 4483362458)
 
@@ -62,58 +91,84 @@ local flyTab = Window:CreateTab("TP/Fly", 4483362458)
 flyTab:CreateButton({
     Name = "Save Position",
     Callback = function()
-        savedPosition = hrp.Position
-        Rayfield:Notify({
-            Title = "WeroHub",
-            Content = "¡Posición guardada correctamente!",
-            Duration = 3
-        })
+        local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            savedPosition = hrp.Position
+            Rayfield:Notify({
+                Title = "WeroHub",
+                Content = "¡Posición guardada correctamente!",
+                Duration = 3
+            })
+        end
     end,
 })
 
--- Toggle para caminar y saltar hacia la posición guardada
+-- Toggle para caminar y saltar alto al destino
 flyTab:CreateToggle({
     Name = "Walk & High Jump to Saved Pos",
     CurrentValue = false,
-    Flag = "WalkJumpToggle",
+    Flag = "WalkHighJumpToggle",
     Callback = function(enabled)
         if enabled and savedPosition then
-            isWalkingAndJumping = true
+            isMovingAndJumping = true
 
-            -- Establecer velocidad normal del juego (ajusta si sabes cuál es)
-            local normalWalkSpeed = 16
-            humanoid.WalkSpeed = normalWalkSpeed
+            local character = player.Character or player.CharacterAdded:Wait()
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            local hrp = character:FindFirstChild("HumanoidRootPart")
 
-            while isWalkingAndJumping and player.Character and player.Character:FindFirstChild("HumanoidRootPart") do
-                local hrp = player.Character.HumanoidRootPart
-                local distance = (savedPosition - hrp.Position).Magnitude
-                if distance < 2 then
-                    isWalkingAndJumping = false
-                    Rayfield:Notify({
-                        Title = "WeroHub",
-                        Content = "Llegaste a la posición",
-                        Duration = 3
-                    })
-                    break
+            -- Aumentar JumpPower para saltar más alto (aprox 50 studs)
+            local originalJumpPower = humanoid.JumpPower
+            humanoid.JumpPower = 150 -- ajusta para lograr unos 50 studs de salto
+
+            humanoid.WalkSpeed = 16 -- velocidad normal
+
+            -- Mover y saltar repetidamente
+            humanoid:MoveTo(savedPosition)
+
+            local reached = false
+
+            local connection
+            connection = humanoid.MoveToFinished:Connect(function(reachedSuccessfully)
+                reached = reachedSuccessfully
+                isMovingAndJumping = false
+                connection:Disconnect()
+            end)
+
+            -- Loop para saltar mientras camina
+            spawn(function()
+                while isMovingAndJumping do
+                    if humanoid.FloorMaterial ~= Enum.Material.Air then
+                        humanoid.Jump = true
+                    end
+                    task.wait(0.3)
                 end
+            end)
 
-                -- Movimiento hacia la posición (simple dirección)
-                local direction = (savedPosition - hrp.Position).Unit
-                humanoid:Move(direction, false)
-
-                -- Saltar alto si está en el suelo
-                if humanoid.FloorMaterial ~= Enum.Material.Air then
-                    humanoid.Jump = true
-                end
-
+            -- Esperar hasta que llegue
+            while isMovingAndJumping do
                 task.wait(0.1)
             end
 
-            humanoid.WalkSpeed = normalWalkSpeed -- Opcional: restaurar velocidad al final
+            -- Restaurar JumpPower
+            humanoid.JumpPower = originalJumpPower
+
+            Rayfield:Notify({
+                Title = "WeroHub",
+                Content = "¡Llegaste a la posición!",
+                Duration = 3
+            })
 
         else
-            isWalkingAndJumping = false
-            humanoid.WalkSpeed = 16 -- restaurar velocidad normal
+            isMovingAndJumping = false
+            -- Restaurar valores si cancelas
+            local character = player.Character
+            if character then
+                local humanoid = character:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    humanoid.JumpPower = 50 -- valor por defecto usual
+                    humanoid.WalkSpeed = 16
+                end
+            end
         end
     end,
 })
