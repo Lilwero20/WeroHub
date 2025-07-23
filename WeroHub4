@@ -1,480 +1,59 @@
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
-
-local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local hrp = character:WaitForChild("HumanoidRootPart")
-local humanoid = character:WaitForChild("Humanoid")
-
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "WeroHub Steal a Brainrot",
-   LoadingTitle = "WeroHub Steal a Brainrot Script",
-   LoadingSubtitle = "by WeroScripts",
-   ConfigurationSaving = {
-      Enabled = true,
-      FolderName = nil,
-      FileName = "Big Hub"
-   },
-   Discord = {
-      Enabled = false,
-   },
-   KeySystem = false,
+    Name = "WeroHub - Speed Boost",
+    LoadingTitle = "WeroHub",
+    LoadingSubtitle = "By WeroScripts",
+    ConfigurationSaving = {
+        Enabled = false
+    },
+    Discord = {
+        Enabled = false
+    },
+    KeySystem = false
 })
 
-local Tab = Window:CreateTab("Main")
-
--- Variables generales
-local originalWalkSpeed = 34
-local boostedWalkSpeed = 60
-local speedBypassConnection
-local speedToggle = false
-local spawnPos = hrp.Position
-local savedPosition = nil
-local autoTungBatToggle = false
-
--- ScreenGui y botones
-local playerGui = player:WaitForChild("PlayerGui")
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "BypassButtonsGui"
-screenGui.Parent = playerGui
-
--- Botón Fly to Spawn
-local flyButton = Instance.new("TextButton")
-flyButton.Size = UDim2.new(0, 160, 0, 40)
-flyButton.Position = UDim2.new(0.7, 0, 0.85, 0)
-flyButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-flyButton.TextColor3 = Color3.new(1,1,1)
-flyButton.Font = Enum.Font.GothamBold
-flyButton.TextSize = 18
-flyButton.Text = "Fly to Spawn"
-flyButton.Visible = false
-flyButton.Parent = screenGui
-
--- Botón Instant TP Up
-local instantTPButton = flyButton:Clone()
-instantTPButton.Position = UDim2.new(0.7, 0, 0.8, 0)
-instantTPButton.Text = "Instant TP Up +50"
-instantTPButton.Visible = false
-instantTPButton.Parent = screenGui
-
--- Botón Guardar posición
-local savePosButton = Instance.new("TextButton")
-savePosButton.Size = UDim2.new(0, 160, 0, 40)
-savePosButton.Position = UDim2.new(0.05, 0, 0.85, 0)
-savePosButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-savePosButton.TextColor3 = Color3.new(1,1,1)
-savePosButton.Font = Enum.Font.GothamBold
-savePosButton.TextSize = 18
-savePosButton.Text = "Guardar Posición"
-savePosButton.Visible = false
-savePosButton.Parent = screenGui
-
--- Botón Teletransportar a posición guardada
-local tpSavedButton = savePosButton:Clone()
-tpSavedButton.Position = UDim2.new(0.05, 0, 0.8, 0)
-tpSavedButton.Text = "Teletransportar Guardado"
-tpSavedButton.Visible = false
-tpSavedButton.Parent = screenGui
-
--- Toggles
+local Tab = Window:CreateTab("Speed", 4483362458)
 
 Tab:CreateToggle({
-    Name = "Speed 60 Bypass",
+    Name = "Speed Boost (Speed Coil)",
     CurrentValue = false,
-    Flag = "SpeedToggle",
-    Callback = function(value)
-        local char = player.Character or player.CharacterAdded:Wait()
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if not hum then return end
+    Flag = "SpeedCoilToggle",
+    Callback = function(state)
+        local player = game.Players.LocalPlayer
+        local backpack = player:WaitForChild("Backpack")
+        local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 
-        speedToggle = value
+        -- Buscar el Speed Coil en el juego
+        local function findSpeedCoil()
+            -- Buscar en la mochila
+            local tool = backpack:FindFirstChild("Speed Coil")
+            if not tool then
+                -- Buscar en ReplicatedStorage si hay una tienda
+                local replicatedStorage = game:GetService("ReplicatedStorage")
+                local item = replicatedStorage:FindFirstChild("Speed Coil")
+                if item and item:IsA("Tool") then
+                    tool = item:Clone()
+                    tool.Parent = backpack
+                end
+            end
+            return tool
+        end
 
-        if value then
-            hum.WalkSpeed = boostedWalkSpeed
-            speedBypassConnection = RunService.Heartbeat:Connect(function()
-                pcall(function()
-                    if hum and hum.WalkSpeed ~= boostedWalkSpeed then
-                        hum.WalkSpeed = boostedWalkSpeed
+        if state then
+            local coil = findSpeedCoil()
+            if coil and humanoid then
+                humanoid:EquipTool(coil)
+                task.delay(0.5, function()
+                    if humanoid and coil then
+                        humanoid:UnequipTools()
                     end
                 end)
-            end)
+            end
         else
-            if speedBypassConnection then
-                speedBypassConnection:Disconnect()
-                speedBypassConnection = nil
-            end
-            hum.WalkSpeed = originalWalkSpeed
-        end
-    end,
-})
-
-Tab:CreateToggle({
-    Name = "Mostrar Botón Fly to Spawn",
-    CurrentValue = false,
-    Flag = "FlyButtonToggle",
-    Callback = function(value)
-        flyButton.Visible = value
-        if value then
-            spawnPos = hrp.Position
-        end
-    end,
-})
-
-Tab:CreateToggle({
-    Name = "Mostrar Botón Instant TP Up",
-    CurrentValue = false,
-    Flag = "InstantTPButtonToggle",
-    Callback = function(value)
-        instantTPButton.Visible = value
-    end,
-})
-
-Tab:CreateToggle({
-    Name = "Mostrar Botón Guardar Posición",
-    CurrentValue = false,
-    Flag = "SavePosButtonToggle",
-    Callback = function(value)
-        savePosButton.Visible = value
-    end,
-})
-
-Tab:CreateToggle({
-    Name = "Mostrar Botón TP Guardado",
-    CurrentValue = false,
-    Flag = "TpSavedButtonToggle",
-    Callback = function(value)
-        tpSavedButton.Visible = value
-    end,
-})
-
-Tab:CreateToggle({
-    Name = "Auto Tung Bat (10 studs)",
-    CurrentValue = false,
-    Flag = "AutoTungBatToggle",
-    Callback = function(value)
-        autoTungBatToggle = value
-    end,
-})
-
-local antiRagdollConnection
-Tab:CreateToggle({
-    Name = "Anti Ragdoll",
-    CurrentValue = false,
-    Flag = "AntiRagdollToggle",
-    Callback = function(value)
-        if value then
-            antiRagdollConnection = RunService.Heartbeat:Connect(function()
-                local char = player.Character
-                if char then
-                    local hum = char:FindFirstChildOfClass("Humanoid")
-                    if hum then
-                        hum.PlatformStand = false
-                    end
-                end
-            end)
-        else
-            if antiRagdollConnection then
-                antiRagdollConnection:Disconnect()
-                antiRagdollConnection = nil
-            end
-        end
-    end,
-})
-
--- Funciones
-
-local function flyToPosition(targetPos)
-    if not hrp or not hrp.Parent then return end
-    local bv = Instance.new("BodyVelocity")
-    bv.MaxForce = Vector3.new(1e5,1e5,1e5)
-    bv.Velocity = Vector3.new(0,0,0)
-    bv.Parent = hrp
-
-    local flying = true
-    local stage = 1
-
-    RunService:BindToRenderStep("FlyBypass", 301, function()
-        if not flying or not hrp or not hrp.Parent then
-            flying = false
-            RunService:UnbindFromRenderStep("FlyBypass")
-            bv:Destroy()
-            return
-        end
-
-        if stage == 1 then
-            local target = hrp.Position + Vector3.new(0, 10, 0)
-            local dir = (target - hrp.Position)
-            if dir.Magnitude < 0.5 then
-                stage = 2
-            else
-                bv.Velocity = dir.Unit * 34
-            end
-        elseif stage == 2 then
-            local dir = (targetPos - hrp.Position)
-            if dir.Magnitude < 1 then
-                stage = 3
-            else
-                bv.Velocity = dir.Unit * 34
-            end
-        elseif stage == 3 then
-            local target = hrp.Position - Vector3.new(0, 10, 0)
-            local dir = (target - hrp.Position)
-            if dir.Magnitude < 0.5 then
-                flying = false
-                RunService:UnbindFromRenderStep("FlyBypass")
-                bv:Destroy()
-                return
-            else
-                bv.Velocity = dir.Unit * 34
-            end
-        end
-    end)
-end
-
-local function instantTPUp()
-    if not hrp then return end
-    local targetPos = hrp.Position + Vector3.new(0,50,0)
-    hrp.CFrame = CFrame.new(targetPos)
-end
-
-local function simpleTeleport(targetPos)
-    if hrp and targetPos then
-        hrp.CFrame = CFrame.new(targetPos)
-    end
-end
-
-flyButton.MouseButton1Click:Connect(function()
-    flyToPosition(spawnPos)
-end)
-
-instantTPButton.MouseButton1Click:Connect(function()
-    instantTPUp()
-end)
-
-savePosButton.MouseButton1Click:Connect(function()
-    savedPosition = hrp.Position
-    print("Posición guardada:", savedPosition)
-end)
-
-tpSavedButton.MouseButton1Click:Connect(function()
-    if savedPosition then
-        simpleTeleport(savedPosition)
-    else
-        print("No hay posición guardada")
-    end
-end)
-
--- Auto Tung Bat
-RunService.Heartbeat:Connect(function()
-    if autoTungBatToggle then
-        local char = player.Character
-        if not char then return end
-        local tool = char:FindFirstChildOfClass("Tool")
-        if tool and tool.Name == "Tung Bat" then
-            for _, plr in pairs(Players:GetPlayers()) do
-                if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character:FindFirstChildOfClass("Humanoid") then
-                    local dist = (plr.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
-                    if dist <= 10 then
-                        -- Guardar posición actual
-                        local originalCFrame = hrp.CFrame
-                        
-                        -- Moverte brevemente al lado del jugador
-                        local targetPos = plr.Character.HumanoidRootPart.Position + Vector3.new(1, 0, 0)
-                        hrp.CFrame = CFrame.new(targetPos)
-
-                        -- Golpe
-                        tool:Activate()
-
-                        -- Regresar a la posición original después de un frame
-                        task.delay(0.1, function()
-                            if hrp and hrp.Parent then
-                                hrp.CFrame = originalCFrame
-                            end
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end)
-
--- ESP
-local function createESP(plr)
-    local espBillboard = Instance.new("BillboardGui")
-    espBillboard.Name = "ESP"
-    espBillboard.Adornee = plr.Character and plr.Character:FindFirstChild("Head")
-    espBillboard.Size = UDim2.new(0,100,0,40)
-    espBillboard.AlwaysOnTop = true
-
-    local nameLabel = Instance.new("TextLabel")
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.TextColor3 = Color3.new(1,0,0)
-    nameLabel.TextStrokeColor3 = Color3.new(0,0,0)
-    nameLabel.TextStrokeTransparency = 0
-    nameLabel.Text = plr.Name
-    nameLabel.Size = UDim2.new(1,0,1,0)
-    nameLabel.Font = Enum.Font.GothamBold
-    nameLabel.TextScaled = true
-    nameLabel.Parent = espBillboard
-
-    espBillboard.Parent = plr.Character and plr.Character:FindFirstChild("Head")
-
-    for _, part in pairs(plr.Character:GetChildren()) do
-        if part:IsA("BasePart") then
-            local highlight = part:FindFirstChild("ESPHighlight")
-            if not highlight then
-                highlight = Instance.new("Highlight")
-                highlight.Name = "ESPHighlight"
-                highlight.Adornee = part
-                highlight.FillColor = Color3.fromRGB(255,0,0)
-                highlight.OutlineColor = Color3.fromRGB(255,255,255)
-                highlight.Parent = part
-            end
-        end
-    end
-end
-
-local function removeESP(plr)
-    if plr.Character then
-        local head = plr.Character:FindFirstChild("Head")
-        if head then
-            local esp = head:FindFirstChild("ESP")
-            if esp then
-                esp:Destroy()
-            end
-        end
-        for _, part in pairs(plr.Character:GetChildren()) do
-            if part:IsA("BasePart") then
-                local highlight = part:FindFirstChild("ESPHighlight")
-                if highlight then
-                    highlight:Destroy()
-                end
-            end
-        end
-    end
-end
-
-local function onCharacterAdded(plr, char)
-    wait(0.1)
-    createESP(plr)
-end
-
-for _, plr in pairs(Players:GetPlayers()) do
-    if plr ~= player and plr.Character then
-        createESP(plr)
-    end
-    plr.CharacterAdded:Connect(function(char)
-        onCharacterAdded(plr, char)
-    end)
-end
-
-Players.PlayerAdded:Connect(function(plr)
-    plr.CharacterAdded:Connect(function(char)
-        onCharacterAdded(plr, char)
-    end)
-end)
-
--- Mantener estado después de morir
-player.CharacterAdded:Connect(function(char)
-    character = char
-    hrp = char:WaitForChild("HumanoidRootPart")
-    humanoid = char:WaitForChild("Humanoid")
-
-    if speedToggle then
-        humanoid.WalkSpeed = boostedWalkSpeed
-        speedBypassConnection = RunService.Heartbeat:Connect(function()
-            pcall(function()
-                if humanoid and humanoid.WalkSpeed ~= boostedWalkSpeed then
-                    humanoid.WalkSpeed = boostedWalkSpeed
-                end
-            end)
-        end)
-    end
-
-    if antiRagdollConnection then
-        antiRagdollConnection:Disconnect()
-        antiRagdollConnection = RunService.Heartbeat:Connect(function()
             if humanoid then
-                humanoid.PlatformStand = false
-            end
-        end)
-    end
-end)
-
-Tab:CreateToggle({
-    Name = "Eliminar Anti-Cheats por código",
-    CurrentValue = false,
-    Flag = "DeepAntiCheatRemover",
-    Callback = function(state)
-        if not state then return end
-
-        local keywords = {
-            "kick",
-            "ban",
-            "exploit",
-            "detected",
-            "WalkSpeed = 0",
-            "JumpPower = 0",
-            "Humanoid.Health = 0",
-            "UserInputService.InputBegan",
-            "IsA(\"Exploit\")",
-            "RemoteEvent",
-            "RemoteFunction",
-            "report",
-            "LogService",
-            "CheckCaller",
-            "is_synapse_function",
-            "getconnections",
-            "hookfunction",
-            "detect",
-            "AntiCheat",
-            "require(",
-        }
-
-        local function containsAntiCheatCode(scriptInstance)
-            local success, result = pcall(function()
-                return scriptInstance.Source
-            end)
-            if success and typeof(result) == "string" then
-                local lowerCode = result:lower()
-                for _, keyword in ipairs(keywords) do
-                    if lowerCode:find(keyword:lower()) then
-                        return true
-                    end
-                end
-            end
-            return false
-        end
-
-        local function scanAndRemove(parent)
-            for _, obj in ipairs(parent:GetDescendants()) do
-                if obj:IsA("LocalScript") or obj:IsA("ModuleScript") or obj:IsA("Script") then
-                    if containsAntiCheatCode(obj) then
-                        print("🛑 Eliminando posible anti-cheat:", obj:GetFullName())
-                        obj:Destroy()
-                    end
-                end
+                humanoid:UnequipTools()
             end
         end
-
-        -- Lugares comunes donde pueden estar
-        local servicesToScan = {
-            game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui"),
-            game:GetService("ReplicatedFirst"),
-            game:GetService("StarterGui"),
-            game:GetService("Workspace"),
-            game:GetService("Lighting"),
-            game:GetService("ReplicatedStorage"),
-            game:GetService("StarterPlayer"),
-        }
-
-        for _, service in pairs(servicesToScan) do
-            scanAndRemove(service)
-        end
-
-        print("✅ Escaneo completo.")
     end,
 })
