@@ -45,15 +45,16 @@ Tab:CreateToggle({
     end,
 })
 
-local savedPosition = nil
-local flying = false
-
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 local hrp = character:WaitForChild("HumanoidRootPart")
+
+local savedPosition = nil
+local isWalkingAndJumping = false
 
 local flyTab = Window:CreateTab("TP/Fly", 4483362458)
 
@@ -70,52 +71,49 @@ flyTab:CreateButton({
     end,
 })
 
--- Toggle para volar a la posición guardada
+-- Toggle para caminar y saltar hacia la posición guardada
 flyTab:CreateToggle({
-    Name = "Fly to Saved Pos",
+    Name = "Walk & High Jump to Saved Pos",
     CurrentValue = false,
-    Flag = "FlyToSavedPos",
+    Flag = "WalkJumpToggle",
     Callback = function(enabled)
-        flying = enabled
+        if enabled and savedPosition then
+            isWalkingAndJumping = true
 
-        if flying and savedPosition then
-            -- Elevar al cielo
-            local upTween = TweenService:Create(hrp, TweenInfo.new(0.4, Enum.EasingStyle.Sine), { Position = hrp.Position + Vector3.new(0, 10, 0) })
-            upTween:Play()
-            upTween.Completed:Wait()
+            -- Establecer velocidad normal del juego (ajusta si sabes cuál es)
+            local normalWalkSpeed = 16
+            humanoid.WalkSpeed = normalWalkSpeed
 
-            -- Bypass detección (reduce fricción)
-            humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-            humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-            character:FindFirstChildOfClass("Humanoid").PlatformStand = true
+            while isWalkingAndJumping and player.Character and player.Character:FindFirstChild("HumanoidRootPart") do
+                local hrp = player.Character.HumanoidRootPart
+                local distance = (savedPosition - hrp.Position).Magnitude
+                if distance < 2 then
+                    isWalkingAndJumping = false
+                    Rayfield:Notify({
+                        Title = "WeroHub",
+                        Content = "Llegaste a la posición",
+                        Duration = 3
+                    })
+                    break
+                end
 
-            -- Calcular duración del vuelo
-            local distance = (Vector3.new(savedPosition.X, hrp.Position.Y, savedPosition.Z) - hrp.Position).Magnitude
-            local speed = 56
-            local time = distance / speed
+                -- Movimiento hacia la posición (simple dirección)
+                local direction = (savedPosition - hrp.Position).Unit
+                humanoid:Move(direction, false)
 
-            -- Tween horizontal
-            local moveTween = TweenService:Create(hrp, TweenInfo.new(time, Enum.EasingStyle.Linear), {
-                Position = Vector3.new(savedPosition.X, hrp.Position.Y, savedPosition.Z)
-            })
-            moveTween:Play()
-            moveTween.Completed:Wait()
+                -- Saltar alto si está en el suelo
+                if humanoid.FloorMaterial ~= Enum.Material.Air then
+                    humanoid.Jump = true
+                end
 
-            -- Bajar 10 studs
-            local downTween = TweenService:Create(hrp, TweenInfo.new(0.4, Enum.EasingStyle.Sine), { Position = savedPosition })
-            downTween:Play()
-            downTween.Completed:Wait()
+                task.wait(0.1)
+            end
 
-            -- Restaurar controles
-            character:FindFirstChildOfClass("Humanoid").PlatformStand = false
-            humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
-            humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
+            humanoid.WalkSpeed = normalWalkSpeed -- Opcional: restaurar velocidad al final
 
-            Rayfield:Notify({
-                Title = "WeroHub",
-                Content = "Has sido transportado con éxito 🛩️",
-                Duration = 3
-            })
+        else
+            isWalkingAndJumping = false
+            humanoid.WalkSpeed = 16 -- restaurar velocidad normal
         end
     end,
 })
