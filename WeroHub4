@@ -120,7 +120,7 @@ flyTab:CreateToggle({
             local originalJumpPower = humanoid.JumpPower
             humanoid.JumpPower = 150 -- ajusta para lograr unos 50 studs de salto
 
-            humanoid.WalkSpeed = 16 -- velocidad normal
+            humanoid.WalkSpeed = 34 -- velocidad normal
 
             -- Mover y saltar repetidamente
             humanoid:MoveTo(savedPosition)
@@ -166,7 +166,7 @@ flyTab:CreateToggle({
                 local humanoid = character:FindFirstChildOfClass("Humanoid")
                 if humanoid then
                     humanoid.JumpPower = 50 -- valor por defecto usual
-                    humanoid.WalkSpeed = 16
+                    humanoid.WalkSpeed = 34
                 end
             end
         end
