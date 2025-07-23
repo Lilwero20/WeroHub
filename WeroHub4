@@ -69,17 +69,18 @@ savePosButton.TextColor3 = Color3.new(1,1,1)
 savePosButton.Font = Enum.Font.GothamBold
 savePosButton.TextSize = 18
 savePosButton.Text = "Guardar Posición"
+savePosButton.Visible = false
 savePosButton.Parent = screenGui
 
 -- Botón Teletransportar a posición guardada
 local tpSavedButton = savePosButton:Clone()
 tpSavedButton.Position = UDim2.new(0.05, 0, 0.8, 0)
 tpSavedButton.Text = "Teletransportar Guardado"
+tpSavedButton.Visible = false
 tpSavedButton.Parent = screenGui
 
--- Funciones principales
+-- Toggles
 
--- Speed bypass toggle
 Tab:CreateToggle({
     Name = "Speed 60 Bypass",
     CurrentValue = false,
@@ -110,34 +111,45 @@ Tab:CreateToggle({
     end,
 })
 
--- Mostrar/Ocultar botón Fly to Spawn
-local flyButtonToggle = false
 Tab:CreateToggle({
     Name = "Mostrar Botón Fly to Spawn",
     CurrentValue = false,
     Flag = "FlyButtonToggle",
     Callback = function(value)
-        flyButtonToggle = value
-        flyButton.Visible = flyButtonToggle
-        if flyButtonToggle then
-            spawnPos = hrp.Position -- Actualiza spawnPos
+        flyButton.Visible = value
+        if value then
+            spawnPos = hrp.Position
         end
     end,
 })
 
--- Mostrar/Ocultar botón Instant TP Up
-local instantTPButtonToggle = false
 Tab:CreateToggle({
     Name = "Mostrar Botón Instant TP Up",
     CurrentValue = false,
     Flag = "InstantTPButtonToggle",
     Callback = function(value)
-        instantTPButtonToggle = value
-        instantTPButton.Visible = instantTPButtonToggle
+        instantTPButton.Visible = value
     end,
 })
 
--- Auto Tung Bat toggle
+Tab:CreateToggle({
+    Name = "Mostrar Botón Guardar Posición",
+    CurrentValue = false,
+    Flag = "SavePosButtonToggle",
+    Callback = function(value)
+        savePosButton.Visible = value
+    end,
+})
+
+Tab:CreateToggle({
+    Name = "Mostrar Botón TP Guardado",
+    CurrentValue = false,
+    Flag = "TpSavedButtonToggle",
+    Callback = function(value)
+        tpSavedButton.Visible = value
+    end,
+})
+
 Tab:CreateToggle({
     Name = "Auto Tung Bat (10 studs)",
     CurrentValue = false,
@@ -147,7 +159,6 @@ Tab:CreateToggle({
     end,
 })
 
--- Anti ragdoll toggle
 local antiRagdollConnection
 Tab:CreateToggle({
     Name = "Anti Ragdoll",
@@ -173,7 +184,8 @@ Tab:CreateToggle({
     end,
 })
 
--- Función vuelo gradual para Fly to Spawn
+-- Funciones
+
 local function flyToPosition(targetPos)
     if not hrp or not hrp.Parent then return end
     local bv = Instance.new("BodyVelocity")
@@ -182,7 +194,7 @@ local function flyToPosition(targetPos)
     bv.Parent = hrp
 
     local flying = true
-    local stage = 1 -- 1 = subir 10 studs, 2 = ir a spawn, 3 = bajar 10 studs
+    local stage = 1
 
     RunService:BindToRenderStep("FlyBypass", 301, function()
         if not flying or not hrp or not hrp.Parent then
@@ -222,21 +234,18 @@ local function flyToPosition(targetPos)
     end)
 end
 
--- Función Instant TP Up (teletransporta instantáneamente +50 studs)
 local function instantTPUp()
     if not hrp then return end
     local targetPos = hrp.Position + Vector3.new(0,50,0)
     hrp.CFrame = CFrame.new(targetPos)
 end
 
--- Función simple teletransporte a posición guardada
 local function simpleTeleport(targetPos)
     if hrp and targetPos then
         hrp.CFrame = CFrame.new(targetPos)
     end
 end
 
--- Eventos botones
 flyButton.MouseButton1Click:Connect(function()
     flyToPosition(spawnPos)
 end)
@@ -258,7 +267,7 @@ tpSavedButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- Auto Tung Bat function
+-- Auto Tung Bat
 RunService.Heartbeat:Connect(function()
     if autoTungBatToggle then
         local char = player.Character
@@ -269,9 +278,7 @@ RunService.Heartbeat:Connect(function()
                 if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character:FindFirstChildOfClass("Humanoid") then
                     local dist = (plr.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
                     if dist <= 10 then
-                        -- Simular golpeando al jugador (esto depende de cómo funcione la herramienta, aquí un ejemplo simple)
-                        tool:Activate() -- activa el tool, puede variar según herramienta
-                        -- Podrías agregar eventos o disparar eventos remotos aquí para golpear si la herramienta usa RemoteEvents
+                        tool:Activate()
                     end
                 end
             end
@@ -279,7 +286,7 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- ESP básico (nombre + resaltado visible aunque invisibles)
+-- ESP
 local function createESP(plr)
     local espBillboard = Instance.new("BillboardGui")
     espBillboard.Name = "ESP"
@@ -299,8 +306,7 @@ local function createESP(plr)
     nameLabel.Parent = espBillboard
 
     espBillboard.Parent = plr.Character and plr.Character:FindFirstChild("Head")
-    
-    -- Resaltar cuerpo aunque esté invisible
+
     for _, part in pairs(plr.Character:GetChildren()) do
         if part:IsA("BasePart") then
             local highlight = part:FindFirstChild("ESPHighlight")
@@ -356,13 +362,12 @@ Players.PlayerAdded:Connect(function(plr)
     end)
 end)
 
--- Mantener GUI y toggles después de morir
+-- Mantener estado después de morir
 player.CharacterAdded:Connect(function(char)
     character = char
     hrp = char:WaitForChild("HumanoidRootPart")
     humanoid = char:WaitForChild("Humanoid")
 
-    -- Reset speed toggle on respawn if was on
     if speedToggle then
         humanoid.WalkSpeed = boostedWalkSpeed
         speedBypassConnection = RunService.Heartbeat:Connect(function()
@@ -374,7 +379,6 @@ player.CharacterAdded:Connect(function(char)
         end)
     end
 
-    -- Reactivar anti ragdoll si estaba activado
     if antiRagdollConnection then
         antiRagdollConnection:Disconnect()
         antiRagdollConnection = RunService.Heartbeat:Connect(function()
