@@ -278,7 +278,22 @@ RunService.Heartbeat:Connect(function()
                 if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character:FindFirstChildOfClass("Humanoid") then
                     local dist = (plr.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
                     if dist <= 10 then
+                        -- Guardar posición actual
+                        local originalCFrame = hrp.CFrame
+                        
+                        -- Moverte brevemente al lado del jugador
+                        local targetPos = plr.Character.HumanoidRootPart.Position + Vector3.new(1, 0, 0)
+                        hrp.CFrame = CFrame.new(targetPos)
+
+                        -- Golpe
                         tool:Activate()
+
+                        -- Regresar a la posición original después de un frame
+                        task.delay(0.1, function()
+                            if hrp and hrp.Parent then
+                                hrp.CFrame = originalCFrame
+                            end
+                        end)
                     end
                 end
             end
