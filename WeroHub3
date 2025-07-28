@@ -1,21 +1,22 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
-loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "Teleport Fly",
-    LoadingTitle = "Teleport Fly",
-    LoadingSubtitle = "by ChatGPT",
-    ConfigurationSaving = {
-        Enabled = true,
-        FolderName = nil,
-        FileName = "TeleportFlyConfig"
-    },
-    Discord = {
-        Enabled = false,
-        Invite = "",
-        RememberJoins = true
+    Name = "WeroHub",
+    Icon = 89001596756285,
+    LoadingTitle = "Loading WeroHub",
+    LoadingSubtitle = "by Wero",
+    Theme = "Amethyst",
+    DisableRayfieldPrompts = false,
+    DisableBuildWarnings = false,
+    ConfigurationSaving = { Enabled = true, FolderName = nil, FileName = "Big Hub" },
+    Discord = { Enabled = false, Invite = "noinvitelink", RememberJoins = true },
+    KeySystem = false,
+    KeySettings = {
+        Title = "Untitled", Subtitle = "Key System", Note = "No method of obtaining the key is provided",
+        FileName = "Key", SaveKey = true, GrabKeyFromSite = false, Key = {"Hello"}
     }
 })
 
@@ -109,3 +110,4 @@ local button = Tab:CreateButton({
             end
         end)
     end
+})
