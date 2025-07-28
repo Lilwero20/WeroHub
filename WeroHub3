@@ -1,119 +1,112 @@
-local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
-
-local Window = Rayfield:CreateWindow({
-    Name = "WeroHub - Speed Boost",
-    LoadingTitle = "WeroHub",
-    LoadingSubtitle = "By WeroScripts",
-    ConfigurationSaving = {
-        Enabled = false
-    },
-    Discord = {
-        Enabled = false
-    },
-    KeySystem = false
-})
-
-local Tab = Window:CreateTab("Speed", 4483362458)
-
-Tab:CreateToggle({
-    Name = "Speed 60 Bypass(Buy SpeedCoil Equip and Unequip for no problems)",
-    CurrentValue = false,
-    Flag = "SpeedToggle",
-    Callback = function(value)
-        local char = player.Character or player.CharacterAdded:Wait()
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if not hum then return end
-
-        speedToggle = value
-
-        if value then
-            hum.WalkSpeed = boostedWalkSpeed
-            speedBypassConnection = RunService.Heartbeat:Connect(function()
-                pcall(function()
-                    if hum and hum.WalkSpeed ~= boostedWalkSpeed then
-                        hum.WalkSpeed = boostedWalkSpeed
-                    end
-                end)
-            end)
-        else
-            if speedBypassConnection then
-                speedBypassConnection:Disconnect()
-                speedBypassConnection = nil
-            end
-            hum.WalkSpeed = originalWalkSpeed
-        end
-    end,
-})
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
-local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
-local hrp = character:WaitForChild("HumanoidRootPart")
+local Rayfield = loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Rayfield/main/source"))()
 
-local savedPosition = nil
-local isWalkingAndJumping = false
-
-local flyTab = Window:CreateTab("TP/Fly", 4483362458)
-
--- Botón para guardar posición
-flyTab:CreateButton({
-    Name = "Save Position",
-    Callback = function()
-        savedPosition = hrp.Position
-        Rayfield:Notify({
-            Title = "WeroHub",
-            Content = "¡Posición guardada correctamente!",
-            Duration = 3
-        })
-    end,
+local Window = Rayfield:CreateWindow({
+    Name = "Teleport Fly",
+    LoadingTitle = "Teleport Fly",
+    LoadingSubtitle = "by ChatGPT",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = nil,
+        FileName = "TeleportFlyConfig"
+    },
+    Discord = {
+        Enabled = false,
+        Invite = "",
+        RememberJoins = true
+    }
 })
 
--- Toggle para caminar y saltar hacia la posición guardada
-flyTab:CreateToggle({
-    Name = "Walk & High Jump to Saved Pos",
-    CurrentValue = false,
-    Flag = "WalkJumpToggle",
-    Callback = function(enabled)
-        if enabled and savedPosition then
-            isWalkingAndJumping = true
+local Tab = Window:CreateTab("Fly to Player", 4483362458) -- ícono cualquiera
 
-            -- Establecer velocidad normal del juego (ajusta si sabes cuál es)
-            local normalWalkSpeed = 16
-            humanoid.WalkSpeed = normalWalkSpeed
+-- Tabla para guardar jugadores y actualizar dropdown
+local playerNames = {}
 
-            while isWalkingAndJumping and player.Character and player.Character:FindFirstChild("HumanoidRootPart") do
-                local hrp = player.Character.HumanoidRootPart
-                local distance = (savedPosition - hrp.Position).Magnitude
-                if distance < 2 then
-                    isWalkingAndJumping = false
-                    Rayfield:Notify({
-                        Title = "WeroHub",
-                        Content = "Llegaste a la posición",
-                        Duration = 3
-                    })
-                    break
-                end
+local function updatePlayerNames()
+    playerNames = {}
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= Players.LocalPlayer then
+            table.insert(playerNames, player.Name)
+        end
+    end
+end
 
-                -- Movimiento hacia la posición (simple dirección)
-                local direction = (savedPosition - hrp.Position).Unit
-                humanoid:Move(direction, false)
+updatePlayerNames()
 
-                -- Saltar alto si está en el suelo
-                if humanoid.FloorMaterial ~= Enum.Material.Air then
-                    humanoid.Jump = true
-                end
+-- Actualizar dropdown cuando un jugador entra o sale
+Players.PlayerAdded:Connect(function(player)
+    updatePlayerNames()
+    dropdown:SetOptions(playerNames)
+end)
+Players.PlayerRemoving:Connect(function(player)
+    updatePlayerNames()
+    dropdown:SetOptions(playerNames)
+end)
 
-                task.wait(0.1)
+local dropdown = Tab:CreateDropdown({
+    Name = "Selecciona un jugador",
+    Options = playerNames,
+    CurrentOption = playerNames[1] or "",
+    Flag = "PlayerSelector",
+    Callback = function(option)
+        -- Aquí puedes hacer algo si quieres al seleccionar jugador
+    end
+})
+
+local button = Tab:CreateButton({
+    Name = "Volar hacia el jugador",
+    Callback = function()
+        local targetName = dropdown:Get()
+        local targetPlayer = Players:FindFirstChild(targetName)
+        local localPlayer = Players.LocalPlayer
+        local character = localPlayer.Character
+        local humanoidRootPart = character and character:FindFirstChild("HumanoidRootPart")
+
+        if not humanoidRootPart then
+            warn("No se encontró HumanoidRootPart")
+            return
+        end
+
+        if not targetPlayer or not targetPlayer.Character or not targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            warn("Jugador objetivo no válido o sin personaje")
+            return
+        end
+
+        local targetHRP = targetPlayer.Character.HumanoidRootPart
+
+        -- Subir 10 studs al despegar
+        local startPos = humanoidRootPart.Position + Vector3.new(0, 10, 0)
+        humanoidRootPart.CFrame = CFrame.new(startPos)
+
+        -- Volar hacia el objetivo
+        local flySpeed = 250
+        local reached = false
+
+        -- Crear una función para movernos cada frame hacia el objetivo en línea recta
+        local connection
+        connection = RunService.Heartbeat:Connect(function(deltaTime)
+            if not humanoidRootPart or not targetHRP then
+                connection:Disconnect()
+                return
             end
 
-            humanoid.WalkSpeed = normalWalkSpeed -- Opcional: restaurar velocidad al final
+            local direction = (targetHRP.Position - humanoidRootPart.Position)
+            local distance = direction.Magnitude
 
-        else
-            isWalkingAndJumping = false
-            humanoid.WalkSpeed = 16 -- restaurar velocidad normal
-        end
-    end,
+            if distance < 5 then
+                reached = true
+            end
+
+            if reached then
+                -- Al llegar, bajar 10 studs
+                humanoidRootPart.CFrame = CFrame.new(targetHRP.Position - Vector3.new(0,10,0))
+                connection:Disconnect()
+            else
+                local moveVector = direction.Unit * flySpeed * deltaTime
+                humanoidRootPart.CFrame = humanoidRootPart.CFrame + moveVector
+            end
+        end)
+    end
 })
