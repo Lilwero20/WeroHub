@@ -35,19 +35,16 @@ end
 
 updatePlayerNames()
 
--- Primero creamos el dropdown
 local dropdown = Tab:CreateDropdown({
     Name = "Selecciona un jugador",
     Options = playerNames,
     CurrentOption = playerNames[1] or "",
     Flag = "PlayerSelector",
     Callback = function(option)
-        -- Opcional: manejar selección
         print("Jugador seleccionado:", option)
     end
 })
 
--- Ahora conectamos los eventos para actualizar dropdown (ya existe)
 Players.PlayerAdded:Connect(function()
     updatePlayerNames()
     if dropdown then
@@ -64,6 +61,20 @@ end)
 
 local flying = false
 local flySpeed = 250
+
+local function smoothVerticalMove(humanoidRootPart, targetY)
+    while humanoidRootPart and math.abs(humanoidRootPart.Position.Y - targetY) > 0.1 do
+        local currentPos = humanoidRootPart.Position
+        local direction = targetY > humanoidRootPart.Position.Y and 1 or -1
+        local newY = math.clamp(
+            humanoidRootPart.Position.Y + direction * 0.5,
+            math.min(humanoidRootPart.Position.Y, targetY),
+            math.max(humanoidRootPart.Position.Y, targetY)
+        )
+        humanoidRootPart.CFrame = CFrame.new(currentPos.X, newY, currentPos.Z)
+        RunService.Heartbeat:Wait()
+    end
+end
 
 local button = Tab:CreateButton({
     Name = "Volar hacia el jugador",
@@ -102,26 +113,19 @@ local button = Tab:CreateButton({
         flying = true
         local targetHRP = targetPlayer.Character.HumanoidRootPart
 
-        -- Subir 10 studs progresivamente
-        local goalHeight = humanoidRootPart.Position.Y + 10
-        while humanoidRootPart and humanoidRootPart.Position.Y < goalHeight do
-            humanoidRootPart.CFrame = humanoidRootPart.CFrame + Vector3.new(0, 1, 0)
-            wait(0.03)
-        end
+        -- Subir 10 studs
+        smoothVerticalMove(humanoidRootPart, humanoidRootPart.Position.Y + 10)
 
         -- Volar hacia el objetivo
         while flying and humanoidRootPart and targetHRP and (humanoidRootPart.Position - targetHRP.Position).Magnitude > 5 do
+            local delta = RunService.Heartbeat:Wait()
             local direction = (targetHRP.Position - humanoidRootPart.Position).Unit
-            local moveVector = direction * flySpeed * wait(0.03)
+            local moveVector = direction * flySpeed * delta
             humanoidRootPart.CFrame = humanoidRootPart.CFrame + moveVector
         end
 
-        -- Bajar 10 studs progresivamente
-        local goalLower = humanoidRootPart.Position.Y - 10
-        while humanoidRootPart and humanoidRootPart.Position.Y > goalLower do
-            humanoidRootPart.CFrame = humanoidRootPart.CFrame - Vector3.new(0, 1, 0)
-            wait(0.03)
-        end
+        -- Bajar 10 studs
+        smoothVerticalMove(humanoidRootPart, humanoidRootPart.Position.Y - 10)
 
         flying = false
     end
