@@ -1,5 +1,51 @@
+-- Capturar prints en TextLabel
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Crear GUI para mensajes si no existe
+if not PlayerGui:FindFirstChild("MensajesGUI") then
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "MensajesGUI"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = PlayerGui
+
+    local mensajeLabel = Instance.new("TextLabel")
+    mensajeLabel.Name = "MensajeLabel"
+    mensajeLabel.Text = ""
+    mensajeLabel.Size = UDim2.new(0.3, 0, 0.07, 0)
+    mensajeLabel.Position = UDim2.new(0.35, 0, 0.05, 0)
+    mensajeLabel.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    mensajeLabel.TextColor3 = Color3.fromRGB(0, 255, 127)
+    mensajeLabel.TextSize = 18
+    mensajeLabel.Font = Enum.Font.GothamBold
+    mensajeLabel.Visible = false
+    mensajeLabel.BackgroundTransparency = 0.2
+    mensajeLabel.TextScaled = true
+    mensajeLabel.BorderSizePixel = 0
+    mensajeLabel.Parent = screenGui
+end
+
+-- Redirigir print a TextLabel y consola
+local originalPrint = print
+print = function(...)
+    local args = {...}
+    local text = ""
+    for i, v in ipairs(args) do
+        text = text .. tostring(v)
+        if i < #args then text = text .. " " end
+    end
+    -- Mostrar en consola
+    originalPrint(text)
+    -- Mostrar en GUI
+    local gui = PlayerGui:WaitForChild("MensajesGUI")
+    local label = gui:WaitForChild("MensajeLabel")
+    label.Text = text
+    label.Visible = true
+    task.delay(3, function()
+        label.Visible = false
+    end)
+end
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
@@ -20,112 +66,966 @@ local Window = Rayfield:CreateWindow({
     }
 })
 
-local Tab = Window:CreateTab("Fly to Player", 4483362458)
+-- Tab Creation
+local StealTab   = Window:CreateTab("Steal a Brainrot(BETA)", 4483362458)
+local ScriptsTab    = Window:CreateTab("Scripts", 4483362458)
+local MiscTab = Window:CreateTab("🔧 Miscs", 4483362458)
+local CreditsInfoTab = Window:CreateTab("Credits and Info/Creditos y informacion", 4483362458)
 
-local playerNames = {}
+-- Services
+local Players           = game:GetService("Players")
+local TweenService      = game:GetService("TweenService")
+local Workspace         = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
 
-local function updatePlayerNames()
-    playerNames = {}
+local localPlayer = Players.LocalPlayer
+
+-- ============================================================
+-- CreditsTab
+-- ============================================================
+
+CreditsInfoTab:CreateParagraph({
+    Title = "Script Made By WeroScripts in YT (English)",
+    Content = "Script made by WeroScripts"
+})
+
+CreditsInfoTab:CreateParagraph({
+    Title = "Warning",
+    Content = "Every script was showcased on my channel, including Steal and Brainrot,Steal a brainrot script was made by me"
+})
+
+CreditsInfoTab:CreateParagraph({
+    Title = "Advertencia",
+    Content = "Todos los scripts fueron mostrados en mi canal, incluyendo Steal y Brainrot. El script de Steal y Brainrot fue creado por mí"
+})
+
+CreditsInfoTab:CreateParagraph({
+    Title = "La duración de la key es de 3 a 4 días",
+    Content = "Puedes obtener una key de por vida en Discord, mándame un mensaje directo"
+})
+
+CreditsInfoTab:CreateParagraph({
+    Title = "The key duration is 3-4 days",
+    Content = "You can get lifetime key in DC make a DM for me"
+})
+
+CreditsInfoTab:CreateParagraph({
+    Title = "Script hecho por WeroScripts en YouTube (Español/Spanish)",
+    Content = "Script hecho por WeroScripts"
+})
+
+-- ============================================================
+-- STEALTAB
+-- ============================================================
+
+local savedPosition = nil
+local running = false
+
+-- BOTÓN: Guardar posición
+StealTab:CreateButton({
+    Name = "Guardar posición actual(Guarda en tu base)",
+    Callback = function()
+        local char = game.Players.LocalPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            savedPosition = char.HumanoidRootPart.Position
+            Rayfield:Notify({
+                Title = "Posición guardada",
+                Content = "Tu posición ha sido guardada exitosamente.",
+                Duration = 4,
+            })
+        end
+    end,
+})
+
+-- TOGGLE: Mostrar botón para ir saltando hacia la posición guardada
+StealTab:CreateToggle({
+    Name = "Goto Base Bypass",
+    CurrentValue = false,
+    Flag = "AutoJumpToSaved",
+    Callback = function(enabled)
+        if not savedPosition then
+            Rayfield:Notify({
+                Title = "Error",
+                Content = "Primero debes guardar una posición.",
+                Duration = 3,
+            })
+            return
+        end
+
+        if enabled then
+            local player = game.Players.LocalPlayer
+            local gui = player:WaitForChild("PlayerGui")
+            local screenGui = Instance.new("ScreenGui", gui)
+            screenGui.Name = "AutoJumpGui"
+            screenGui.ResetOnSpawn = false
+
+            local button = Instance.new("TextButton")
+            button.Parent = screenGui
+            button.Size = UDim2.new(0, 160, 0, 50)
+            button.Position = UDim2.new(0.8, 0, 0.85, 0)
+            button.Text = "Goto Base Bypass"
+            button.BackgroundColor3 = Color3.fromRGB(45, 45, 75)
+            button.TextColor3 = Color3.new(1, 1, 1)
+            button.BorderSizePixel = 0
+            button.Font = Enum.Font.GothamSemibold
+            button.TextSize = 18
+            button.Active = true
+            button.Draggable = true
+
+            -- Rondas y sombra
+            local uicorner = Instance.new("UICorner")
+            uicorner.CornerRadius = UDim.new(0, 12)
+            uicorner.Parent = button
+
+            local shadow = Instance.new("Frame")
+            shadow.Parent = button
+            shadow.Size = UDim2.new(1, 6, 1, 6)
+            shadow.Position = UDim2.new(0, 3, 0, 3)
+            shadow.BackgroundColor3 = Color3.new(0, 0, 0)
+            shadow.BorderSizePixel = 0
+            shadow.ZIndex = 0
+
+            local corner2 = Instance.new("UICorner")
+            corner2.CornerRadius = UDim.new(0, 12)
+            corner2.Parent = shadow
+
+            local running = false
+
+            button.MouseButton1Click:Connect(function()
+                if not savedPosition then return end
+                local char = player.Character
+                local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+                if not humanoid or not hrp then return end
+
+                running = true
+                while running and (hrp.Position - savedPosition).Magnitude > 5 do
+                    local distance = (hrp.Position - savedPosition).Magnitude
+                    humanoid:MoveTo(savedPosition)
+
+                    -- Si la distancia es mayor a 10 studs, salta con fuerza 130
+                    if distance > 10 then
+                        if humanoid:GetState() ~= Enum.HumanoidStateType.Freefall and humanoid:GetState() ~= Enum.HumanoidStateType.Jumping then
+                            if humanoid.FloorMaterial ~= Enum.Material.Air then
+                                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                                hrp.Velocity = Vector3.new(hrp.Velocity.X, 130, hrp.Velocity.Z)
+                            end
+                        end
+                    end
+
+                    task.wait(0.1)
+                end
+                running = false
+            end)
+        else
+            local existing = game.Players.LocalPlayer.PlayerGui:FindFirstChild("AutoJumpGui")
+            if existing then
+                existing:Destroy()
+            end
+            running = false
+        end
+    end,
+})
+
+local Players = game:GetService("Players")
+local localPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+
+local originalSpeed = nil
+local speedToggleConnection = nil
+
+local function setSpeed(value)
+    local character = localPlayer.Character
+    if not character then return end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.WalkSpeed = value
+    end
+end
+
+StealTab:CreateToggle({
+    Name = "Speed 72 Bypass",
+    CurrentValue = false,
+    Flag = "Speed72Bypass",
+    Callback = function(active)
+        local character = localPlayer.Character
+        if not character then return end
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if not humanoid then return end
+
+        if active then
+            if not originalSpeed then
+                originalSpeed = humanoid.WalkSpeed
+            end
+
+            -- Activar velocidad 72
+            setSpeed(72)
+
+            -- Conexión para asegurarse que se mantenga la velocidad 60 si la modifican
+            speedToggleConnection = humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+                if humanoid.WalkSpeed ~= 72 then
+                    humanoid.WalkSpeed = 72
+                end
+            end)
+
+            print("Speed 72 Bypass activado")
+        else
+            -- Restaurar velocidad original
+            if originalSpeed then
+                setSpeed(originalSpeed)
+            else
+                setSpeed(34) -- Valor por defecto común
+            end
+
+            if speedToggleConnection then
+                speedToggleConnection:Disconnect()
+                speedToggleConnection = nil
+            end
+
+            print("Speed 72 Bypass desactivado")
+        end
+    end,
+})
+
+StealTab:CreateParagraph({
+    Title = "Speed Boost 72 Bypass Tutorial (English)",
+    Content = "if you cant  walk normally, buy speed coil first equip it, turn on the speed toggle and walk and unequip the speed coil, and now you can run"
+})
+
+StealTab:CreateParagraph({
+    Title = "Speed Boost 72 Bypass Tutorial (Español/Spanish)",
+    Content = "Si no puedes caminar normalmente, primero compra la Speed Coil, equípala, enciende el interruptor de velocidad (speed toggle) y camina. Luego, desequipa la Speed Coil, y ahora podrás correr."
+})
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local localPlayer = Players.LocalPlayer
+local character = localPlayer.Character or localPlayer.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local rootPart = character:WaitForChild("HumanoidRootPart")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local localPlayer = Players.LocalPlayer
+
+local espEnabled = false
+local espConnections = {}
+local highlights = {}
+
+local function createBillboard(player)
+    local char = player.Character
+    if not char then return end
+    local head = char:FindFirstChild("Head")
+    if not head then return end
+
+    -- Crear BillboardGui
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "ESP_Billboard"
+    billboard.Adornee = head
+    billboard.AlwaysOnTop = true
+    billboard.Size = UDim2.new(0, 150, 0, 40)
+    billboard.StudsOffset = Vector3.new(0, 2, 0)
+    billboard.Parent = head
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Text = player.Name
+    label.TextColor3 = Color3.new(0, 1, 0)
+    label.TextStrokeTransparency = 0
+    label.TextScaled = true
+    label.Font = Enum.Font.GothamBold
+    label.Parent = billboard
+
+    return billboard
+end
+
+local function createHighlight(char)
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "ESP_Highlight"
+    highlight.FillColor = Color3.fromRGB(0, 255, 0)
+    highlight.OutlineColor = Color3.fromRGB(0, 255, 0)
+    highlight.Adornee = char
+    highlight.Parent = char
+    return highlight
+end
+
+local function enableESP()
+    espEnabled = true
+
     for _, player in pairs(Players:GetPlayers()) do
-        if player ~= Players.LocalPlayer then
-            table.insert(playerNames, player.Name)
+        if player ~= localPlayer then
+            local function setupCharacter(char)
+                if not char then return end
+
+                -- Nombre con Billboard
+                if not char:FindFirstChild("ESP_Billboard") and char:FindFirstChild("Head") then
+                    createBillboard(player)
+                end
+
+                -- Highlight para iluminar
+                if not char:FindFirstChild("ESP_Highlight") then
+                    highlights[player] = createHighlight(char)
+                end
+
+                -- Mostrar jugador invisible (set transparencia a 0.5)
+                for _, part in pairs(char:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.LocalTransparencyModifier = 0.5
+                    end
+                end
+            end
+
+            if player.Character then
+                setupCharacter(player.Character)
+            end
+
+            -- Conectar a CharacterAdded para nuevo personaje
+            espConnections[player] = player.CharacterAdded:Connect(function(char)
+                if espEnabled then
+                    setupCharacter(char)
+                end
+            end)
+        end
+    end
+
+    -- Detectar jugadores que se unen después
+    espConnections["PlayerAdded"] = Players.PlayerAdded:Connect(function(player)
+        if player ~= localPlayer and espEnabled then
+            espConnections[player] = player.CharacterAdded:Connect(function(char)
+                if espEnabled then
+                    local function setupCharacter(char)
+                        if not char then return end
+
+                        if not char:FindFirstChild("ESP_Billboard") and char:FindFirstChild("Head") then
+                            createBillboard(player)
+                        end
+
+                        if not char:FindFirstChild("ESP_Highlight") then
+                            highlights[player] = createHighlight(char)
+                        end
+
+                        for _, part in pairs(char:GetChildren()) do
+                            if part:IsA("BasePart") then
+                                part.LocalTransparencyModifier = 0.5
+                            end
+                        end
+                    end
+
+                    setupCharacter(char)
+                end
+            end)
+        end
+    end)
+end
+
+local function disableESP()
+    espEnabled = false
+
+    -- Desconectar conexiones
+    for key, conn in pairs(espConnections) do
+        if typeof(conn) == "RBXScriptConnection" then
+            conn:Disconnect()
+        end
+        espConnections[key] = nil
+    end
+
+    -- Quitar highlight y billboard y restaurar transparencia
+    for _, player in pairs(Players:GetPlayers()) do
+        local char = player.Character
+        if char then
+            -- Billboard
+            local billboard = char:FindFirstChild("Head") and char.Head:FindFirstChild("ESP_Billboard")
+            if billboard then
+                billboard:Destroy()
+            end
+
+            -- Highlight
+            if highlights[player] then
+                highlights[player]:Destroy()
+                highlights[player] = nil
+            end
+
+            -- Restaurar transparencia
+            for _, part in pairs(char:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.LocalTransparencyModifier = 0
+                end
+            end
         end
     end
 end
 
-updatePlayerNames()
-
-local dropdown = Tab:CreateDropdown({
-    Name = "Selecciona un jugador",
-    Options = playerNames,
-    CurrentOption = playerNames[1] or "",
-    Flag = "PlayerSelector",
-    Callback = function(option)
-        print("Jugador seleccionado:", option)
+-- Crear toggle en tu StealTab
+StealTab:CreateToggle({
+    Name = "ESP",
+    CurrentValue = false,
+    Flag = "ESP",
+    Callback = function(active)
+        if active then
+            enableESP()
+            print("ESP Activado")
+        else
+            disableESP()
+            print("ESP Desactivado")
+        end
     end
 })
 
-Players.PlayerAdded:Connect(function()
-    updatePlayerNames()
-    if dropdown then
-        dropdown:SetOptions(playerNames)
+local selectedBrainrots = {}
+local espBrainrotsEnabled = false
+
+-- DROPDOWN
+StealTab:CreateDropdown({
+    Name = "Brainrots",
+    Options = {
+        "Noobini Pizzanini", "Lirilí Larilá", "Tim Cheese", "Fluriflura", "Talpa Di Fero",
+        "Svinina Bombardino", "Pipi Kiwi", "Trippi Troppi", "Tung Tung Tung Sahur",
+        "Gangster Footera", "Bobrito Bandito", "Boneca Ambalabu", "Ta Ta Ta Ta Sahur",
+        "Tric Trac Baraboom", "Cacto Hipopotamo", "Cappuccino Assassino", "Brr Brr Patapim",
+        "Trulimero Trulicina", "Bambini Crostini", "Bananita Dolphinita", "Perochello Lemonchello",
+        "Brri Brri Bicus Dicus Bombicus", "Avocadini Guffo", "Burbaloni Loliloli",
+        "Chimpanzini Bananini", "Ballerina Cappuccina", "Chef Crabracadabra",
+        "Glorbo Fruttodrillo", "Blueberrinni Octopusini", "Strawberelli Flamingelli",
+        "Pandaccini Bananini", "Frigo Camelo", "Orangutini Ananassini", "Rhino Toasterino",
+        "Bombardiro Crocodilo", "Bombombini Gusini", "Cavallo Virtuoso", "Spioniro Golubiro",
+        "Tigrulini Watermellini", "Zibra Zubra Zibralini", "Cocofanto Elefanto",
+        "Gattatino Nyanino", "Girafa Celestre", "Tralalero Tralala", "Matteo",
+        "Espresso Signora", "Odin Din Din Dun", "Trenostruzzo Turbo 3000",
+        "Statuino Libertino", "Orcalelo Orcala", "Tigroligre Frutonni", "Ballerino Lololo",
+        "La Vaca Saturno Saturnita", "Chimpanzini Spiderini", "Garama And Madungdung",
+        "Los Tralaleritos", "Las Tralaleritas", "Graipuss Medussi", "La Grande Combinasion",
+        "Tortugini Dragonfruitini", "Pot Hotspot", "Nuclearo Dinosauro"
+    },
+    CurrentOption = {},
+    MultiSelect = true,
+    Callback = function(selected)
+        selectedBrainrots = selected
+        print("Seleccionaste: " .. table.concat(selected, ", "))
+        if espBrainrotsEnabled then
+            updateESP()
+        end
     end
-end)
+})
 
-Players.PlayerRemoving:Connect(function()
-    updatePlayerNames()
-    if dropdown then
-        dropdown:SetOptions(playerNames)
+-- TOGGLE DE ESP
+StealTab:CreateToggle({
+    Name = "ESP Brainrots",
+    CurrentValue = false,
+    Callback = function(Value)
+        espBrainrotsEnabled = Value
+        updateESP()
     end
-end)
+})
 
-local flying = false
-local flySpeed = 250
-
-local button = Tab:CreateButton({
-    Name = "Volar hacia el jugador",
-    Callback = function()
-        if flying then
-            warn("Ya estás volando. Espera a que termine.")
-            return
+-- FUNCIÓN DE ESP
+function updateESP()
+    -- Elimina ESPs viejos
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("Highlight") and v.Name == "BrainrotESP" then
+            v:Destroy()
+        elseif v:IsA("BillboardGui") and v.Name == "BrainrotName" then
+            v:Destroy()
         end
+    end
 
-        local targetName = dropdown:Get()
-        if not targetName or targetName == "" then
-            warn("No has seleccionado ningún jugador.")
-            return
+    -- Si está apagado, salir
+    if not espBrainrotsEnabled then return end
+
+    -- Buscar en cada plot
+    for _, plot in pairs(workspace:WaitForChild("Plots"):GetChildren()) do
+        local animalPodiums = plot:FindFirstChild("AnimalPodiums")
+        if animalPodiums then
+            for _, descendant in pairs(animalPodiums:GetDescendants()) do
+                if descendant:IsA("TextLabel") and descendant.Name == "DisplayName" then
+                    local brainrotName = descendant.Text
+                    if table.find(selectedBrainrots, brainrotName) then
+                        local model = descendant:FindFirstAncestorOfClass("Model")
+                        if model and not model:FindFirstChild("BrainrotESP") then
+                            -- Highlight
+                            local highlight = Instance.new("Highlight")
+                            highlight.Name = "BrainrotESP"
+                            highlight.FillColor = Color3.fromRGB(255, 255, 0)
+                            highlight.OutlineColor = Color3.fromRGB(0, 0, 0)
+                            highlight.OutlineTransparency = 0
+                            highlight.FillTransparency = 0.5
+                            highlight.Adornee = model
+                            highlight.Parent = model
+
+                            -- Billboard con el nombre
+                            local billboard = Instance.new("BillboardGui")
+                            billboard.Name = "BrainrotName"
+                            billboard.Size = UDim2.new(0, 200, 0, 50)
+                            billboard.StudsOffset = Vector3.new(0, 3, 0)
+                            billboard.AlwaysOnTop = true
+                            billboard.Parent = model
+
+                            local label = Instance.new("TextLabel")
+                            label.Size = UDim2.new(1, 0, 1, 0)
+                            label.BackgroundTransparency = 1
+                            label.Text = brainrotName
+                            label.TextColor3 = Color3.new(1, 1, 0)
+                            label.TextStrokeTransparency = 0
+                            label.Font = Enum.Font.GothamBold
+                            label.TextScaled = true
+                            label.Parent = billboard
+                        end
+                    end
+                end
+            end
         end
+    end
+end
 
-        local targetPlayer = Players:FindFirstChild(targetName)
-        if not targetPlayer then
-            warn("El jugador seleccionado no existe o salió.")
-            return
-        end
 
-        local localPlayer = Players.LocalPlayer
-        local character = localPlayer.Character or localPlayer.CharacterAdded:Wait()
-        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+local jumpBoostConnection
+local respawnConnection
+local originalJumpPower
 
-        if not humanoidRootPart then
-            warn("No se encontró HumanoidRootPart")
-            return
-        end
+StealTab:CreateToggle({
+    Name = "Jump Boost 100 Bypass",
+    CurrentValue = false,
+    Flag = "JumpBoost100",
+    Callback = function(enabled)
+        local player = game.Players.LocalPlayer
 
-        if not targetPlayer.Character or not targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            warn("Jugador objetivo no válido o sin personaje")
-            return
-        end
-
-        flying = true
-        local targetHRP = targetPlayer.Character.HumanoidRootPart
-
-        -- Función auxiliar para mover verticalmente (subir o bajar) de forma suave
-        local function smoothVerticalMove(targetY)
-            while humanoidRootPart and math.abs(humanoidRootPart.Position.Y - targetY) > 0.1 do
-                local currentPos = humanoidRootPart.Position
-                local newY = math.clamp(
-                    humanoidRootPart.Position.Y + (targetY > humanoidRootPart.Position.Y and 1 or -1) * 0.5,
-                    math.min(humanoidRootPart.Position.Y, targetY),
-                    math.max(humanoidRootPart.Position.Y, targetY)
-                )
-                humanoidRootPart.CFrame = CFrame.new(currentPos.X, newY, currentPos.Z)
-                RunService.Heartbeat:Wait()
+        local function applyJumpBoost()
+            local char = player.Character
+            if not char then return end
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.UseJumpPower = true
+                originalJumpPower = originalJumpPower or humanoid.JumpPower
+                humanoid.JumpPower = 100
+                humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
+                humanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall, true)
             end
         end
 
-        -- Subir 10 studs
-        smoothVerticalMove(humanoidRootPart.Position.Y + 10)
-
-        -- Volar hacia el objetivo
-        while flying and humanoidRootPart and targetHRP and (humanoidRootPart.Position - targetHRP.Position).Magnitude > 5 do
-            local direction = (targetHRP.Position - humanoidRootPart.Position).Unit
-            local moveVector = direction * flySpeed * RunService.Heartbeat:Wait()
-            humanoidRootPart.CFrame = humanoidRootPart.CFrame + moveVector
+        local function removeJumpBoost()
+            local char = player.Character
+            if not char then return end
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid and originalJumpPower then
+                humanoid.JumpPower = originalJumpPower
+            end
         end
 
-        -- Bajar 10 studs
-        smoothVerticalMove(humanoidRootPart.Position.Y - 10)
+        if enabled then
+            applyJumpBoost()
 
-        flying = false
+            -- Reaplicar al respawn
+            respawnConnection = player.CharacterAdded:Connect(function(char)
+                char:WaitForChild("Humanoid")
+                task.wait(0.2)
+                applyJumpBoost()
+            end)
+        else
+            removeJumpBoost()
+
+            if respawnConnection then
+                respawnConnection:Disconnect()
+                respawnConnection = nil
+            end
+        end
     end
 })
+
+StealTab:CreateButton({
+    Name = "Únete a Discord: https://discord.gg/UcsPnpeF",
+    Callback = function()
+        local url = "https://discord.gg/UcsPnpeF"
+        if syn and syn.open then
+            syn.open(url) -- Synapse X
+        elseif KRNL_LOADED and setclipboard then
+            setclipboard(url) -- KRNL
+            print("Enlace copiado al portapapeles. Ábrelo en tu navegador.")
+        elseif getgenv().open then
+            open(url) -- Some other exploits
+        elseif setclipboard then
+            setclipboard(url) -- Most exploits support setclipboard
+            print("Enlace copiado al portapapeles. Ábrelo en tu navegador.")
+        else
+            print("Tu exploit no soporta abrir enlaces automáticamente. Copia manualmente: " .. url)
+        end
+    end,
+})
+
+StealTab:CreateParagraph({
+    Title = "Report bugs",
+    Content = "Report bugs in the Discord server"
+})
+
+StealTab:CreateParagraph({
+    Title = "Warning",
+    Content = "Warning: This script is in BETA, it may not work correctly"
+})
+
+StealTab:CreateParagraph({
+    Title = "Reporta errores",
+    Content = "Reporta errores en el servidor de Discord"
+})
+
+StealTab:CreateParagraph({
+    Title = "Advertencia",
+    Content = "Advertencia: Este script está en BETA, puede que no funcione correctamente"
+})
+
+-- ============================================================
+-- SCRIPTS TAB
+-- ============================================================
+
+ScriptsTab:CreateButton({Name="Steal a Brainrot Devil's Ugly(UNPATCHED)", Callback=function()
+print("Steal a Brainrot Script Executed")
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/DynaFetchy/Scripts/refs/heads/main/Loader.lua"))()
+end})
+
+ScriptsTab:CreateButton({Name="Steal a Brainrot MoonHub(UNPATCHED)", Callback=function()
+print("Steal a Brainrot Script Executed")
+    loadstring(game:HttpGet('https://raw.githubusercontent.com/KaspikScriptsRb/steal-a-brainrot/refs/heads/main/.lua'))()
+end})
+
+ScriptsTab:CreateButton({Name="Steal a Brainrot Spawner(Visual)", Callback=function()
+print("Steal a Brainrot Script Executed")
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/Crypoth/StealABrainRotSpawner/refs/heads/main/XwareSpawner"))()
+end})
+
+ScriptsTab:CreateButton({Name="Steal a Brainrot Chili(UNPATCHED)", Callback=function()
+print("Steal a Brainrot Script Executed")
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/tienkhanh1/spicy/main/Chilli.lua"))()
+end})
+
+
+ScriptsTab:CreateButton({Name="Steal a Brainrot Arbix(UNPATCHED)", Callback=function()
+print("Steal a Brainrot Script Executed")
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/Youifpg/Steal-a-Brianrot/refs/heads/main/original_script-obfuscated.lua"))()
+end})
+
+
+ScriptsTab:CreateButton({Name="Steal a Brainrot MODDED", Callback=function()
+print("Steal a Brainrot Script Executed")
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/gumanba/Scripts/main/StealaBrainrotMOD"))()
+end})
+
+ScriptsTab:CreateButton({Name="99 Days In The Forest", Callback=function()
+print("99 Days Executed!")
+    loadstring(game:HttpGet("https://soluna-script.vercel.app/99-Nights-in-the-Forest.lua",true))()
+end})
+
+ScriptsTab:CreateButton({Name="Hoho Hub", Callback=function()
+print("Hoho Hub Executed")
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/acsu123/HOHO_H/main/Loading_UI"))()
+end})
+
+ScriptsTab:CreateButton({Name="Grow a Garden AutoMiddle Pets", Callback=function()
+print("Grow a Garden Script Executed")
+    loadstring(game:HttpGet(('https://raw.githubusercontent.com/FakeModz/LimitHub/refs/heads/main/LimitHub_Luarmor_E.lua')))()
+end})
+
+ScriptsTab:CreateButton({Name="Grow a Garden Inf Sprinkler", Callback=function()
+print("Grow a Garden Script Executed")
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/AhmadV99/Speed-Hub-X/main/Speed%20Hub%20X.lua", true))()
+end})
+
+ScriptsTab:CreateButton({Name="Grow a Garden", Callback=function()
+print("Grow a Garden Script Executed")
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/ArdyBotzz/NatHub/refs/heads/master/NatHub.lua"))()
+end})
+
+ScriptsTab:CreateButton({Name="Infinity yield", Callback=function()
+print("Infinity Yield Executed")
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
+end})
+
+ScriptsTab:CreateButton({Name="Dex", Callback=function()
+print("Dex Executed")
+    loadstring(game:HttpGet("https://pastebin.com/raw/FeMbE4xS"))()
+end})
+
+ScriptsTab:CreateButton({Name="DeadRailsBonds", Callback=function()
+print("DeadRails Script Executed")
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/thantzy/thanhub/refs/heads/main/thanv1"))()
+end})
+
+ScriptsTab:CreateButton({Name="DeadRailsBonds2", Callback=function()
+print("DeadRails Script Executed")
+    loadstring(game:HttpGet("https://getnative.cc/script/loader"))()
+end})
+
+ScriptsTab:CreateButton({Name="DeadRails3", Callback=function()
+print("DeadRails Script Executed")
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/gumanba/Scripts/main/DeadRails"))()
+end})
+
+local Button = ScriptsTab:CreateButton({
+    Name = "RemoteSpy v3",
+    Callback = function()
+	print("RemoteSpy v3 Executed")
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/JaoExploiter/StellySpyV3/refs/heads/main/StellySpyV3.txt"))()
+    end,
+})
+
+local Button = ScriptsTab:CreateButton({
+    Name = "Blox Fruits Script",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/tlredz/Scripts/refs/heads/main/main.luau"))()
+    end,
+})
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local VirtualUser = game:GetService("VirtualUser")
+
+-- Crear GUI si no existe
+if not PlayerGui:FindFirstChild("MensajesGUI") then
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "MensajesGUI"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = PlayerGui
+
+    local mensajeLabel = Instance.new("TextLabel")
+    mensajeLabel.Name = "MensajeLabel"
+    mensajeLabel.Text = ""
+    mensajeLabel.Size = UDim2.new(0.3, 0, 0.07, 0)
+    mensajeLabel.Position = UDim2.new(0.35, 0, 0.05, 0)
+    mensajeLabel.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    mensajeLabel.TextColor3 = Color3.fromRGB(0, 255, 127)
+    mensajeLabel.TextSize = 18
+    mensajeLabel.Font = Enum.Font.GothamBold
+    mensajeLabel.Visible = false
+    mensajeLabel.BackgroundTransparency = 0.2
+    mensajeLabel.TextScaled = true
+    mensajeLabel.BorderSizePixel = 0
+    mensajeLabel.Parent = screenGui
+end
+
+-- Función para mostrar mensajes bonitos
+local function MostrarMensaje(texto)
+    local gui = PlayerGui:WaitForChild("MensajesGUI")
+    local label = gui:WaitForChild("MensajeLabel")
+    label.Text = texto
+    label.Visible = true
+    task.wait(3)
+    label.Visible = false
+end
+
+-- Variable para manejar conexión Anti AFK
+local AntiAFK_Connection
+
+-- Toggle Anti AFK en Rayfield
+MiscTab:CreateToggle({
+    Name = "🛡️ Anti AFK",
+    CurrentValue = false,
+    Callback = function(Value)
+        if Value then
+            AntiAFK_Connection = Players.LocalPlayer.Idled:Connect(function()
+                VirtualUser:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+                task.wait(1)
+                VirtualUser:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+            end)
+            MostrarMensaje("✅ Anti AFK activado.")
+        else
+            if AntiAFK_Connection then
+                AntiAFK_Connection:Disconnect()
+                AntiAFK_Connection = nil
+                MostrarMensaje("❌ Anti AFK desactivado.")
+            end
+        end
+    end,
+})
+
+MiscTab:CreateToggle({
+	Name = "📍 Mostrar posición actual",
+	CurrentValue = false,
+	Callback = function(Value)
+		local player = game.Players.LocalPlayer
+		local RunService = game:GetService("RunService")
+		local guiName = "PosicionGUI"
+		local connection
+
+		if Value then
+			-- Crear GUI y TextLabel si no existe
+			local gui = player:FindFirstChild("PlayerGui"):FindFirstChild(guiName)
+			if not gui then
+				gui = Instance.new("ScreenGui")
+				gui.Name = guiName
+				gui.ResetOnSpawn = false
+				gui.Parent = player:WaitForChild("PlayerGui")
+			end
+
+			local label = gui:FindFirstChild("PosLabel")
+			if not label then
+				label = Instance.new("TextLabel")
+				label.Name = "PosLabel"
+				label.Size = UDim2.new(0, 300, 0, 30)
+				label.Position = UDim2.new(0, 10, 0, 10)
+				label.BackgroundColor3 = Color3.new(0, 0, 0)
+				label.BackgroundTransparency = 0.3
+				label.TextColor3 = Color3.new(1, 1, 1)
+				label.TextScaled = true
+				label.Font = Enum.Font.SourceSansBold
+				label.Text = "Posición: "
+				label.Parent = gui
+			end
+
+			label.Visible = true
+
+			-- Iniciar actualizador de posición
+			connection = RunService.RenderStepped:Connect(function()
+				if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+					local pos = player.Character.HumanoidRootPart.Position
+					label.Text = string.format("Posición: (%.1f, %.1f, %.1f)", pos.X, pos.Y, pos.Z)
+				end
+			end)
+
+			-- Guardar la conexión para desconectar luego
+			gui:SetAttribute("UpdaterConnection", connection)
+		else
+			local gui = player:FindFirstChild("PlayerGui"):FindFirstChild(guiName)
+			if gui then
+				local label = gui:FindFirstChild("PosLabel")
+				if label then label:Destroy() end
+
+				local conn = gui:GetAttribute("UpdaterConnection")
+				if conn then
+					pcall(function() conn:Disconnect() end)
+				end
+
+				gui:Destroy()
+			end
+		end
+	end,
+})
+
+MiscTab:CreateToggle({
+	Name = "💨 Mostrar velocidad actual",
+	CurrentValue = false,
+	Callback = function(Value)
+		local player = game.Players.LocalPlayer
+		local RunService = game:GetService("RunService")
+		local guiName = "VelocidadGUI"
+		local connection
+
+		if Value then
+			local gui = player.PlayerGui:FindFirstChild(guiName)
+			if not gui then
+				gui = Instance.new("ScreenGui")
+				gui.Name = guiName
+				gui.ResetOnSpawn = false
+				gui.Parent = player.PlayerGui
+			end
+
+			local label = gui:FindFirstChild("VelocidadLabel")
+			if not label then
+				label = Instance.new("TextLabel")
+				label.Name = "VelocidadLabel"
+				label.Size = UDim2.new(0, 300, 0, 30)
+				label.Position = UDim2.new(0, 10, 0, 50)
+				label.BackgroundColor3 = Color3.new(0, 0, 0)
+				label.BackgroundTransparency = 0.3
+				label.TextColor3 = Color3.new(1, 1, 1)
+				label.TextScaled = true
+				label.Font = Enum.Font.SourceSansBold
+				label.Text = "Velocidad: "
+				label.Parent = gui
+			end
+
+			label.Visible = true
+
+			connection = RunService.RenderStepped:Connect(function()
+				local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+				if hrp then
+					local speed = hrp.Velocity.Magnitude
+					label.Text = string.format("Velocidad: %.1f", speed)
+				end
+			end)
+
+			gui:SetAttribute("SpeedConnection", connection)
+		else
+			local gui = player.PlayerGui:FindFirstChild(guiName)
+			if gui then
+				local label = gui:FindFirstChild("VelocidadLabel")
+				if label then label:Destroy() end
+
+				local conn = gui:GetAttribute("SpeedConnection")
+				if conn then
+					pcall(function() conn:Disconnect() end)
+				end
+
+				gui:Destroy()
+			end
+		end
+	end,
+})
+
+MiscTab:CreateToggle({
+    Name = "🕒 Mostrar hora actual en México",
+    CurrentValue = false,
+    Callback = function(Value)
+        local player = game.Players.LocalPlayer
+        local RunService = game:GetService("RunService")
+        local guiName = "HoraMexicoGUI"
+        local connection
+
+        if Value then
+            -- Crear GUI y TextLabel si no existe
+            local gui = player:FindFirstChild("PlayerGui"):FindFirstChild(guiName)
+            if not gui then
+                gui = Instance.new("ScreenGui")
+                gui.Name = guiName
+                gui.ResetOnSpawn = false
+                gui.Parent = player:WaitForChild("PlayerGui")
+            end
+
+            local label = gui:FindFirstChild("HoraLabel")
+            if not label then
+                label = Instance.new("TextLabel")
+                label.Name = "HoraLabel"
+                label.Size = UDim2.new(0, 300, 0, 30)
+                label.Position = UDim2.new(0, 10, 0, 10)
+                label.BackgroundColor3 = Color3.new(0, 0, 0)
+                label.BackgroundTransparency = 0.3
+                label.TextColor3 = Color3.new(1, 1, 1)
+                label.TextScaled = true
+                label.Font = Enum.Font.SourceSansBold
+                label.Text = "Hora de México: "
+                label.Parent = gui
+            end
+
+            label.Visible = true
+
+            -- Iniciar actualizador de hora
+            connection = RunService.RenderStepped:Connect(function()
+                local currentTime = os.date("!*t", os.time()) -- Obtiene hora UTC
+                -- Convertir la hora UTC a hora de México (zona horaria UTC -6)
+                currentTime.hour = currentTime.hour - 6
+                if currentTime.hour < 0 then
+                    currentTime.hour = currentTime.hour + 24
+                end
+                label.Text = string.format("Hora de México: %02d:%02d:%02d", currentTime.hour, currentTime.min, currentTime.sec)
+            end)
+
+            -- Guardar la conexión para desconectar luego
+            gui:SetAttribute("TimeConnection", connection)
+        else
+            local gui = player:FindFirstChild("PlayerGui"):FindFirstChild(guiName)
+            if gui then
+                local label = gui:FindFirstChild("HoraLabel")
+                if label then label:Destroy() end
+
+                local conn = gui:GetAttribute("TimeConnection")
+                if conn then
+                    pcall(function() conn:Disconnect() end)
+                end
+
+                gui:Destroy()
+            end
+        end
+    end,
+})
+
+
+-- End of WeroHub Script
