@@ -1,28 +1,27 @@
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
-llocal Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "Teleport Fly",
-    LoadingTitle = "Teleport Fly",
-    LoadingSubtitle = "by ChatGPT",
-    ConfigurationSaving = {
-        Enabled = true,
-        FolderName = nil,
-        FileName = "TeleportFlyConfig"
-    },
-    Discord = {
-        Enabled = false,
-        Invite = "",
-        RememberJoins = true
+    Name = "WeroHub",
+    Icon = 89001596756285,
+    LoadingTitle = "Loading WeroHub",
+    LoadingSubtitle = "by Wero",
+    Theme = "Amethyst",
+    DisableRayfieldPrompts = false,
+    DisableBuildWarnings = false,
+    ConfigurationSaving = { Enabled = true, FolderName = nil, FileName = "Big Hub" },
+    Discord = { Enabled = false, Invite = "noinvitelink", RememberJoins = true },
+    KeySystem = false,
+    KeySettings = {
+        Title = "Untitled", Subtitle = "Key System", Note = "No method of obtaining the key is provided",
+        FileName = "Key", SaveKey = true, GrabKeyFromSite = false, Key = {"Hello"}
     }
 })
 
 local Tab = Window:CreateTab("Fly to Player", 4483362458) -- ícono cualquiera
 
--- Tabla para guardar jugadores y actualizar dropdown
 local playerNames = {}
 
 local function updatePlayerNames()
@@ -36,34 +35,41 @@ end
 
 updatePlayerNames()
 
--- Actualizar dropdown cuando un jugador entra o sale
-Players.PlayerAdded:Connect(function(player)
-    updatePlayerNames()
-    dropdown:SetOptions(playerNames)
-end)
-Players.PlayerRemoving:Connect(function(player)
-    updatePlayerNames()
-    dropdown:SetOptions(playerNames)
-end)
-
+-- Primero creamos el dropdown (antes de los eventos)
 local dropdown = Tab:CreateDropdown({
     Name = "Selecciona un jugador",
     Options = playerNames,
     CurrentOption = playerNames[1] or "",
     Flag = "PlayerSelector",
     Callback = function(option)
-        -- Aquí puedes hacer algo si quieres al seleccionar jugador
+        -- Opcional: manejar selección
     end
 })
+
+-- Actualizar dropdown al entrar o salir jugadores
+Players.PlayerAdded:Connect(function()
+    updatePlayerNames()
+    dropdown:SetOptions(playerNames)
+end)
+
+Players.PlayerRemoving:Connect(function()
+    updatePlayerNames()
+    dropdown:SetOptions(playerNames)
+end)
+
+local flying = false
+local flySpeed = 250
 
 local button = Tab:CreateButton({
     Name = "Volar hacia el jugador",
     Callback = function()
+        if flying then return end -- evitar múltiples vuelos a la vez
+
         local targetName = dropdown:Get()
         local targetPlayer = Players:FindFirstChild(targetName)
         local localPlayer = Players.LocalPlayer
-        local character = localPlayer.Character
-        local humanoidRootPart = character and character:FindFirstChild("HumanoidRootPart")
+        local character = localPlayer.Character or localPlayer.CharacterAdded:Wait()
+        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
 
         if not humanoidRootPart then
             warn("No se encontró HumanoidRootPart")
@@ -75,38 +81,30 @@ local button = Tab:CreateButton({
             return
         end
 
+        flying = true
         local targetHRP = targetPlayer.Character.HumanoidRootPart
 
-        -- Subir 10 studs al despegar
-        local startPos = humanoidRootPart.Position + Vector3.new(0, 10, 0)
-        humanoidRootPart.CFrame = CFrame.new(startPos)
+        -- Subir 10 studs progresivamente
+        local goalHeight = humanoidRootPart.Position.Y + 10
+        while humanoidRootPart.Position.Y < goalHeight do
+            humanoidRootPart.CFrame = humanoidRootPart.CFrame + Vector3.new(0, 1, 0)
+            wait(0.03)
+        end
 
         -- Volar hacia el objetivo
-        local flySpeed = 250
-        local reached = false
+        while flying and humanoidRootPart and targetHRP and (humanoidRootPart.Position - targetHRP.Position).Magnitude > 5 do
+            local direction = (targetHRP.Position - humanoidRootPart.Position).Unit
+            local moveVector = direction * flySpeed * wait(0.03)
+            humanoidRootPart.CFrame = humanoidRootPart.CFrame + moveVector
+        end
 
-        -- Crear una función para movernos cada frame hacia el objetivo en línea recta
-        local connection
-        connection = RunService.Heartbeat:Connect(function(deltaTime)
-            if not humanoidRootPart or not targetHRP then
-                connection:Disconnect()
-                return
-            end
+        -- Bajar 10 studs progresivamente
+        local goalLower = humanoidRootPart.Position.Y - 10
+        while humanoidRootPart.Position.Y > goalLower do
+            humanoidRootPart.CFrame = humanoidRootPart.CFrame - Vector3.new(0, 1, 0)
+            wait(0.03)
+        end
 
-            local direction = (targetHRP.Position - humanoidRootPart.Position)
-            local distance = direction.Magnitude
-
-            if distance < 5 then
-                reached = true
-            end
-
-            if reached then
-                -- Al llegar, bajar 10 studs
-                humanoidRootPart.CFrame = CFrame.new(targetHRP.Position - Vector3.new(0,10,0))
-                connection:Disconnect()
-            else
-                local moveVector = direction.Unit * flySpeed * deltaTime
-                humanoidRootPart.CFrame = humanoidRootPart.CFrame + moveVector
-            end
-        end)
+        flying = false
     end
+})
