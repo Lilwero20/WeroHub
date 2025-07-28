@@ -20,9 +20,8 @@ local Window = Rayfield:CreateWindow({
     }
 })
 
-local Tab = Window:CreateTab("Fly to Player", 4483362458) -- ícono cualquiera
+local Tab = Window:CreateTab("Fly to Player", 4483362458)
 
--- Tabla para guardar jugadores y actualizar dropdown
 local playerNames = {}
 
 local function updatePlayerNames()
@@ -36,78 +35,94 @@ end
 
 updatePlayerNames()
 
--- Actualizar dropdown cuando un jugador entra o sale
-Players.PlayerAdded:Connect(function(player)
-    updatePlayerNames()
-    dropdown:SetOptions(playerNames)
-end)
-Players.PlayerRemoving:Connect(function(player)
-    updatePlayerNames()
-    dropdown:SetOptions(playerNames)
-end)
-
+-- Primero creamos el dropdown
 local dropdown = Tab:CreateDropdown({
     Name = "Selecciona un jugador",
     Options = playerNames,
     CurrentOption = playerNames[1] or "",
     Flag = "PlayerSelector",
     Callback = function(option)
-        -- Aquí puedes hacer algo si quieres al seleccionar jugador
+        -- Opcional: manejar selección
+        print("Jugador seleccionado:", option)
     end
 })
+
+-- Ahora conectamos los eventos para actualizar dropdown (ya existe)
+Players.PlayerAdded:Connect(function()
+    updatePlayerNames()
+    if dropdown then
+        dropdown:SetOptions(playerNames)
+    end
+end)
+
+Players.PlayerRemoving:Connect(function()
+    updatePlayerNames()
+    if dropdown then
+        dropdown:SetOptions(playerNames)
+    end
+end)
+
+local flying = false
+local flySpeed = 250
 
 local button = Tab:CreateButton({
     Name = "Volar hacia el jugador",
     Callback = function()
+        if flying then
+            warn("Ya estás volando. Espera a que termine.")
+            return
+        end
+
         local targetName = dropdown:Get()
+        if not targetName or targetName == "" then
+            warn("No has seleccionado ningún jugador.")
+            return
+        end
+
         local targetPlayer = Players:FindFirstChild(targetName)
+        if not targetPlayer then
+            warn("El jugador seleccionado no existe o salió.")
+            return
+        end
+
         local localPlayer = Players.LocalPlayer
-        local character = localPlayer.Character
-        local humanoidRootPart = character and character:FindFirstChild("HumanoidRootPart")
+        local character = localPlayer.Character or localPlayer.CharacterAdded:Wait()
+        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
 
         if not humanoidRootPart then
             warn("No se encontró HumanoidRootPart")
             return
         end
 
-        if not targetPlayer or not targetPlayer.Character or not targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        if not targetPlayer.Character or not targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
             warn("Jugador objetivo no válido o sin personaje")
             return
         end
 
+        flying = true
         local targetHRP = targetPlayer.Character.HumanoidRootPart
 
-        -- Subir 10 studs al despegar
-        local startPos = humanoidRootPart.Position + Vector3.new(0, 10, 0)
-        humanoidRootPart.CFrame = CFrame.new(startPos)
+        -- Subir 10 studs progresivamente
+        local goalHeight = humanoidRootPart.Position.Y + 10
+        while humanoidRootPart and humanoidRootPart.Position.Y < goalHeight do
+            humanoidRootPart.CFrame = humanoidRootPart.CFrame + Vector3.new(0, 1, 0)
+            wait(0.03)
+        end
 
         -- Volar hacia el objetivo
-        local flySpeed = 250
-        local reached = false
+        while flying and humanoidRootPart and targetHRP and (humanoidRootPart.Position - targetHRP.Position).Magnitude > 5 do
+            local direction = (targetHRP.Position - humanoidRootPart.Position).Unit
+            local moveVector = direction * flySpeed * wait(0.03)
+            humanoidRootPart.CFrame = humanoidRootPart.CFrame + moveVector
+        end
 
-        -- Crear una función para movernos cada frame hacia el objetivo en línea recta
-        local connection
-        connection = RunService.Heartbeat:Connect(function(deltaTime)
-            if not humanoidRootPart or not targetHRP then
-                connection:Disconnect()
-                return
-            end
+        -- Bajar 10 studs progresivamente
+        local goalLower = humanoidRootPart.Position.Y - 10
+        while humanoidRootPart and humanoidRootPart.Position.Y > goalLower do
+            humanoidRootPart.CFrame = humanoidRootPart.CFrame - Vector3.new(0, 1, 0)
+            wait(0.03)
+        end
 
-            local direction = (targetHRP.Position - humanoidRootPart.Position)
-            local distance = direction.Magnitude
-
-            if distance < 5 then
-                reached = true
-            end
-
-            if reached then
-                -- Al llegar, bajar 10 studs
-                humanoidRootPart.CFrame = CFrame.new(targetHRP.Position - Vector3.new(0,10,0))
-                connection:Disconnect()
-            else
-                local moveVector = direction.Unit * flySpeed * deltaTime
-                humanoidRootPart.CFrame = humanoidRootPart.CFrame + moveVector
-            end
-        end)
+        flying = false
     end
 })
