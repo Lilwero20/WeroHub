@@ -17,189 +17,187 @@ local ESPTab = Window:MakeTab({
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
-local RunService = game:GetService("RunService")
-local workspace = game:GetService("Workspace")
-
 local respawnConnection
 local originalJumpPower
 
-local selectedBrainrots = {}
-local espBrainrotsEnabled = false
-local trackedBrainrots = {}
-
-local brainrotNames = {
-    "Cocofanto Elefanto",
-    "Girafa Celestre",
-    "Tralalero Tralala",
-    "Odin Din Din Dun",
-    "Gattatino Neonino",
-    "Gattatino Nyanino",
-    "Trenostruzzo Turbo 3000",
-    "Matteo",
-    "Unclito Samito",
-    "Ballerino Lololo",
-    "Espresso Signora",
-    "Statutino Libertino",
-    "Los Crocodillitos",
-    "Orcalero Orcala",
-    "Tigroligre Frutonni",
-    "Piccione Macchina",
-    "Ganganzelli Trulala",
-    "Los TungTungTungCitos",
-    "Tukanno Bananno",
-    "Trippi Troppi Troppa Trippa",
-    "Bulbito Bandito Traktorito",
-    "Los Orcalitos",
-    "Secret Brainrots",
-    "La Vacca Saturno Saturnita",
-    "La Vacca Staturno Saturnita",
-    "Los Tralaleritos",
-    "Las Tralaleritas",
-    "Graipuss Medussi",
-    "La Grande Combinasion",
-    "Sammyni Spyderini",
-    "Garama and Madundung",
-    "Chimpanzini Spiderini",
-    "Nuclearo Dinossauro",
-    "Las Vaquitas Saturnitas",
-    "Pot Hotspot",
-    "Torrtuginni Dragonfrutini",
-    "Chicleteira Bicicleteira",
-    "Dragon Cannelloni",
-    "Agarrini la Palini",
-    "Los Combinasionas",
-    "Los Hotspotsitos",
-    "Esok Sekolah",
-    "Karkerkar Kurkur"
-}
-
--- Toggle general en StealTab para activar/desactivar ESP
 StealTab:AddToggle({
-    Name = "ESP Brainrots",
+    Name = "Jump Boost 100 Bypass",
     Default = false,
     Callback = function(enabled)
-        espBrainrotsEnabled = enabled
+        local function applyJumpBoost()
+            local char = player.Character
+            if not char then return end
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.UseJumpPower = true
+                originalJumpPower = originalJumpPower or humanoid.JumpPower
+                humanoid.JumpPower = 100
+                humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
+                humanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall, true)
+            end
+        end
+
+        local function removeJumpBoost()
+            local char = player.Character
+            if not char then return end
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid and originalJumpPower then
+                humanoid.JumpPower = originalJumpPower
+            end
+        end
+
         if enabled then
-            updateESP()
+            applyJumpBoost()
+
+            -- Reaplicar al respawn
+            respawnConnection = player.CharacterAdded:Connect(function(char)
+                char:WaitForChild("Humanoid")
+                task.wait(0.2)
+                applyJumpBoost()
+            end)
         else
-            clearESP()
+            removeJumpBoost()
+
+            if respawnConnection then
+                respawnConnection:Disconnect()
+                respawnConnection = nil
+            end
         end
     end
 })
 
--- Crear sección en ESPTab para los toggles de brainrots
-local brainrotSection = ESPTab:AddSection({
-    Name = "Brainrots Selección"
-})
+local Players = game:GetService("Players")
+local localPlayer = Players.LocalPlayer
 
--- Agregar toggles dentro de la sección
-for _, name in ipairs(brainrotNames) do
-    brainrotSection:AddToggle({
-        Name = name,
-        Default = false,
-        Callback = function(enabled)
-            if enabled then
-                selectedBrainrots[name] = true
-            else
-                selectedBrainrots[name] = nil
-            end
-            if espBrainrotsEnabled then
-                updateESP()
-            end
-        end
-    })
+local espEnabled = false
+local espConnections = {}
+local highlights = {}
+
+local function createBillboard(player)
+    local char = player.Character
+    if not char then return end
+    local head = char:FindFirstChild("Head")
+    if not head then return end
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "ESP_Billboard"
+    billboard.Adornee = head
+    billboard.AlwaysOnTop = true
+    billboard.Size = UDim2.new(0, 150, 0, 40)
+    billboard.StudsOffset = Vector3.new(0, 2, 0)
+    billboard.Parent = head
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Text = player.Name
+    label.TextColor3 = Color3.new(0, 1, 0)
+    label.TextStrokeTransparency = 0
+    label.TextScaled = true
+    label.Font = Enum.Font.GothamBold
+    label.Parent = billboard
+
+    return billboard
 end
 
--- Función para limpiar los highlights y guis
-function clearESP()
-    for _, v in pairs(workspace:GetDescendants()) do
-        if v:IsA("Highlight") and v.Name == "BrainrotESP" then
-            v:Destroy()
-        elseif v:IsA("BillboardGui") and v.Name == "BrainrotName" then
-            v:Destroy()
+local function createHighlight(char)
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "ESP_Highlight"
+    highlight.FillColor = Color3.fromRGB(0, 255, 0)
+    highlight.OutlineColor = Color3.fromRGB(0, 255, 0)
+    highlight.Adornee = char
+    highlight.Parent = char
+    return highlight
+end
+
+local function setupCharacter(player, char)
+    if not char then return end
+
+    if not char:FindFirstChild("ESP_Billboard") and char:FindFirstChild("Head") then
+        createBillboard(player)
+    end
+
+    if not char:FindFirstChild("ESP_Highlight") then
+        highlights[player] = createHighlight(char)
+    end
+
+    for _, part in pairs(char:GetChildren()) do
+        if part:IsA("BasePart") then
+            part.LocalTransparencyModifier = 0.5
         end
     end
-    trackedBrainrots = {}
 end
 
--- Función para crear ESP
-function updateESP()
-    clearESP()
-    if not espBrainrotsEnabled then return end
+local function enableESP()
+    espEnabled = true
 
-    local plots = workspace:FindFirstChild("Plots")
-    if not plots then return end
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= localPlayer then
+            if player.Character then
+                setupCharacter(player, player.Character)
+            end
+            espConnections[player] = player.CharacterAdded:Connect(function(char)
+                if espEnabled then
+                    setupCharacter(player, char)
+                end
+            end)
+        end
+    end
 
-    for _, plot in pairs(plots:GetChildren()) do
-        local animalPodiums = plot:FindFirstChild("AnimalPodiums")
-        if animalPodiums then
-            for _, descendant in pairs(animalPodiums:GetDescendants()) do
-                if descendant:IsA("TextLabel") and descendant.Name == "DisplayName" then
-                    local brainrotName = descendant.Text
-                    if selectedBrainrots[brainrotName] then
-                        local model = descendant:FindFirstAncestorOfClass("Model")
-                        if model and not model:FindFirstChild("BrainrotESP") then
-                            if not model.PrimaryPart then
-                                local primary = model:FindFirstChildWhichIsA("BasePart")
-                                if primary then model.PrimaryPart = primary else continue end
-                            end
+    espConnections["PlayerAdded"] = Players.PlayerAdded:Connect(function(player)
+        if player ~= localPlayer and espEnabled then
+            espConnections[player] = player.CharacterAdded:Connect(function(char)
+                if espEnabled then
+                    setupCharacter(player, char)
+                end
+            end)
+        end
+    end)
+end
 
-                            local highlight = Instance.new("Highlight")
-                            highlight.Name = "BrainrotESP"
-                            highlight.FillColor = Color3.fromRGB(255, 255, 0)
-                            highlight.OutlineColor = Color3.fromRGB(0, 0, 0)
-                            highlight.OutlineTransparency = 0
-                            highlight.FillTransparency = 0.5
-                            highlight.Adornee = model
-                            highlight.Parent = model
+local function disableESP()
+    espEnabled = false
 
-                            local billboard = Instance.new("BillboardGui")
-                            billboard.Name = "BrainrotName"
-                            billboard.Size = UDim2.new(0, 200, 0, 50)
-                            billboard.StudsOffset = Vector3.new(0, 3, 0)
-                            billboard.AlwaysOnTop = true
-                            billboard.Adornee = model.PrimaryPart
-                            billboard.Parent = model
+    for key, conn in pairs(espConnections) do
+        if typeof(conn) == "RBXScriptConnection" then
+            conn:Disconnect()
+        end
+        espConnections[key] = nil
+    end
 
-                            local label = Instance.new("TextLabel")
-                            label.Size = UDim2.new(1, 0, 1, 0)
-                            label.BackgroundTransparency = 1
-                            label.Text = brainrotName
-                            label.TextColor3 = Color3.new(1, 1, 0)
-                            label.TextStrokeTransparency = 0
-                            label.Font = Enum.Font.GothamBold
-                            label.TextScaled = true
-                            label.Parent = billboard
+    for _, player in pairs(Players:GetPlayers()) do
+        local char = player.Character
+        if char then
+            local billboard = char:FindFirstChild("Head") and char.Head:FindFirstChild("ESP_Billboard")
+            if billboard then
+                billboard:Destroy()
+            end
 
-                            trackedBrainrots[model] = true
+            if highlights[player] then
+                highlights[player]:Destroy()
+                highlights[player] = nil
+            end
 
-                            model.AncestryChanged:Connect(function(_, parent)
-                                if not parent then
-                                    if model:FindFirstChild("BrainrotESP") then model.BrainrotESP:Destroy() end
-                                    if model:FindFirstChild("BrainrotName") then model.BrainrotName:Destroy() end
-                                    trackedBrainrots[model] = nil
-                                end
-                            end)
-                        end
-                    end
+            for _, part in pairs(char:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.LocalTransparencyModifier = 0
                 end
             end
         end
     end
 end
 
--- Limpieza automática si el modelo desaparece
-RunService.Heartbeat:Connect(function()
-    if not espBrainrotsEnabled then return end
-    for model in pairs(trackedBrainrots) do
-        if not model:IsDescendantOf(workspace) then
-            if model:FindFirstChild("BrainrotESP") then
-                model.BrainrotESP:Destroy()
-            end
-            if model:FindFirstChild("BrainrotName") then
-                model.BrainrotName:Destroy()
-            end
-            trackedBrainrots[model] = nil
+-- Asumiendo que tienes la variable StealTab creada y es la pestaña correcta:
+StealTab:AddToggle({
+    Name = "ESP",
+    Default = false,
+    Callback = function(active)
+        if active then
+            enableESP()
+            print("ESP Activado")
+        else
+            disableESP()
+            print("ESP Desactivado")
         end
     end
-end)
+})
