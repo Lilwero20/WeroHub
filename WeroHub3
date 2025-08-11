@@ -243,3 +243,192 @@ RunService.Heartbeat:Connect(function()
         end
     end
 end)
+
+local RunService = game:GetService("RunService")
+local workspace = game:GetService("Workspace")
+
+local selectedBrainrots = {}
+local espBrainrotsEnabled = false
+local trackedBrainrots = {}
+
+local brainrotNames = {
+    "Cocofanto Elefanto",
+    "Girafa Celestre",
+    "Tralalero Tralala",
+    "Odin Din Din Dun",
+    "Gattatino Neonino",
+    "Gattatino Nyanino",
+    "Trenostruzzo Turbo 3000",
+    "Matteo",
+    "Unclito Samito",
+    "Ballerino Lololo",
+    "Espresso Signora",
+    "Statutino Libertino",
+    "Los Crocodillitos",
+    "Orcalero Orcala",
+    "Tigroligre Frutonni",
+    "Piccione Macchina",
+    "Ganganzelli Trulala",
+    "Los TungTungTungCitos",
+    "Tukanno Bananno",
+    "Trippi Troppi Troppa Trippa",
+    "Bulbito Bandito Traktorito",
+    "Los Orcalitos",
+    "Secret Brainrots",
+    "La Vacca Saturno Saturnita",
+    "La Vacca Staturno Saturnita",
+    "Los Tralaleritos",
+    "Las Tralaleritas",
+    "Graipuss Medussi",
+    "La Grande Combinasion",
+    "Sammyni Spyderini",
+    "Garama and Madundung",
+    "Chimpanzini Spiderini",
+    "Nuclearo Dinossauro",
+    "Las Vaquitas Saturnitas",
+    "Pot Hotspot",
+    "Torrtuginni Dragonfrutini",
+    "Chicleteira Bicicleteira",
+    "Dragon Cannelloni",
+    "Agarrini la Palini",
+    "Los Combinasionas",
+    "Los Hotspotsitos",
+    "Esok Sekolah",
+    "Karkerkar Kurkur"
+}
+
+local ESPTab = Window:MakeTab({
+    Name = "ESP Brainrots",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+-- Toggle general en Steal a Brainrot
+StealTab:AddToggle({
+    Name = "ESP Brainrots",
+    Default = false,
+    Callback = function(enabled)
+        espBrainrotsEnabled = enabled
+        if enabled then
+            updateESP()
+        else
+            clearESP()
+        end
+    end
+})
+
+-- Sección de toggles en ESP Brainrots tab
+local brainrotSection = ESPTab:AddSection({Name = "Brainrots Selección"})
+
+for _, name in ipairs(brainrotNames) do
+    brainrotSection:AddToggle({
+        Name = name,
+        Default = false,
+        Callback = function(enabled)
+            if enabled then
+                selectedBrainrots[name] = true
+            else
+                selectedBrainrots[name] = nil
+            end
+            if espBrainrotsEnabled then
+                updateESP()
+            end
+        end
+    })
+end
+
+-- Función para limpiar ESP
+function clearESP()
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("Highlight") and v.Name == "BrainrotESP" then
+            v:Destroy()
+        elseif v:IsA("BillboardGui") and v.Name == "BrainrotName" then
+            v:Destroy()
+        end
+    end
+    trackedBrainrots = {}
+end
+
+-- Función para actualizar ESP
+function updateESP()
+    clearESP()
+    if not espBrainrotsEnabled then return end
+
+    local plots = workspace:FindFirstChild("Plots")
+    if not plots then return end
+
+    for _, plot in pairs(plots:GetChildren()) do
+        local animalPodiums = plot:FindFirstChild("AnimalPodiums")
+        if animalPodiums then
+            for _, descendant in pairs(animalPodiums:GetDescendants()) do
+                if descendant:IsA("TextLabel") and descendant.Name == "DisplayName" then
+                    local brainrotName = descendant.Text
+                    if selectedBrainrots[brainrotName] then
+                        local model = descendant:FindFirstAncestorOfClass("Model")
+                        if model and not model:FindFirstChild("BrainrotESP") then
+                            if not model.PrimaryPart then
+                                local primary = model:FindFirstChildWhichIsA("BasePart")
+                                if primary then model.PrimaryPart = primary else continue end
+                            end
+
+                            -- Highlight
+                            local highlight = Instance.new("Highlight")
+                            highlight.Name = "BrainrotESP"
+                            highlight.FillColor = Color3.fromRGB(255, 255, 0)
+                            highlight.OutlineColor = Color3.fromRGB(0, 0, 0)
+                            highlight.OutlineTransparency = 0
+                            highlight.FillTransparency = 0.5
+                            highlight.Adornee = model
+                            highlight.Parent = model
+
+                            -- BillboardGui con nombre
+                            local billboard = Instance.new("BillboardGui")
+                            billboard.Name = "BrainrotName"
+                            billboard.Size = UDim2.new(0, 200, 0, 50)
+                            billboard.StudsOffset = Vector3.new(0, 3, 0)
+                            billboard.AlwaysOnTop = true
+                            billboard.Adornee = model.PrimaryPart
+                            billboard.Parent = model
+
+                            local label = Instance.new("TextLabel")
+                            label.Size = UDim2.new(1, 0, 1, 0)
+                            label.BackgroundTransparency = 1
+                            label.Text = brainrotName
+                            label.TextColor3 = Color3.new(1, 1, 0)
+                            label.TextStrokeTransparency = 0
+                            label.Font = Enum.Font.GothamBold
+                            label.TextScaled = true
+                            label.Parent = billboard
+
+                            trackedBrainrots[model] = true
+
+                            model.AncestryChanged:Connect(function(_, parent)
+                                if not parent then
+                                    if model:FindFirstChild("BrainrotESP") then model.BrainrotESP:Destroy() end
+                                    if model:FindFirstChild("BrainrotName") then model.BrainrotName:Destroy() end
+                                    trackedBrainrots[model] = nil
+                                end
+                            end)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- Limpieza automática
+RunService.Heartbeat:Connect(function()
+    if not espBrainrotsEnabled then return end
+    for model in pairs(trackedBrainrots) do
+        if not model:IsDescendantOf(workspace) then
+            if model:FindFirstChild("BrainrotESP") then
+                model.BrainrotESP:Destroy()
+            end
+            if model:FindFirstChild("BrainrotName") then
+                model.BrainrotName:Destroy()
+            end
+            trackedBrainrots[model] = nil
+        end
+    end
+end)
