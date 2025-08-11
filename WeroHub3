@@ -2,16 +2,15 @@ local OrionLib = loadstring(game:HttpGet('https://raw.githubusercontent.com/jens
 
 local Window = OrionLib:MakeWindow({Name = "WeroHub", HidePremium = false, SaveConfig = true, ConfigFolder = "WeroHubConfig"})
 
+local ScriptTab = Window:MakeTab({
+	Name = "Scripts",
+	Icon = "rbxassetid://4483345998",
+	PremiumOnly = false
+
 local StealTab = Window:MakeTab({
 	Name = "Steal a Brainrot",
 	Icon = "rbxassetid://4483345998",
 	PremiumOnly = false
-})
-
-local ESPTab = Window:MakeTab({
-    Name = "ESP Brainrots",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
 })
 
 local Players = game:GetService("Players")
@@ -200,4 +199,123 @@ StealTab:AddToggle({
             print("ESP Desactivado")
         end
     end
+})
+
+ScriptTab:AddButton({
+	Name = "Brainrot Finder(UNPATCHED, NEW)",
+	Callback = function()
+      		loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/16fe150cb70da9cec413cb0f526737c0.lua"))()
+  	end    
+})
+
+ScriptTab:AddButton({
+	Name = "Steal a Brainrot CobraHub(UNPATCHED)",
+	Callback = function()
+      		loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/16fe150cb70da9cec413cb0f526737c0.lua"))()
+  	end    
+})
+
+ScriptTab:AddButton({
+	Name = "Steal a Brainrot Chili(UNPATCHED)",
+	Callback = function()
+      		loadstring(game:HttpGet("https://raw.githubusercontent.com/tienkhanh1/spicy/main/Chilli.lua"))()
+  	end    
+})
+
+ScriptTab:AddButton({
+	Name = "Steal a Brainrot Arbix(PATCHED)",
+	Callback = function()
+      		loadstring(game:HttpGet("https://raw.githubusercontent.com/Youifpg/Steal-a-Brianrot/refs/heads/main/original_script-obfuscated.lua"))()
+  	end    
+})
+
+ScriptTab:AddButton({
+	Name = "Steal a Brainrot Chili(UNPATCHED)",
+	Callback = function()
+      		loadstring(game:HttpGet("https://raw.githubusercontent.com/gumanba/Scripts/main/StealaBrainrotMOD"))()
+  	end    
+})
+
+ScriptTab:AddButton({
+	Name = "Steal a Brainrot MODDED",
+	Callback = function()
+      		loadstring(game:HttpGet("https://raw.githubusercontent.com/gumanba/Scripts/main/StealaBrainrotMOD"))()
+  	end    
+})
+
+ScriptTab:AddButton({
+	Name = "99 Days In The Forest",
+	Callback = function()
+      		loadstring(game:HttpGet("https://soluna-script.vercel.app/99-Nights-in-the-Forest.lua",true))()
+  	end    
+})
+
+ScriptTab:AddButton({
+	Name = "Hoho Hub(Blox Fruits)",
+	Callback = function()
+      		loadstring(game:HttpGet("https://raw.githubusercontent.com/acsu123/HOHO_H/main/Loading_UI"))()
+  	end    
+})
+
+ScriptTab:AddButton({
+	Name = "Grow a Garden AutoMiddle Pets",
+	Callback = function()
+      		loadstring(game:HttpGet(('https://raw.githubusercontent.com/FakeModz/LimitHub/refs/heads/main/LimitHub_Luarmor_E.lua')))()
+  	end    
+})
+
+ScriptTab:AddButton({
+	Name = "Grow a Garden Inf Sprinkler",
+	Callback = function()
+      		loadstring(game:HttpGet("https://raw.githubusercontent.com/AhmadV99/Speed-Hub-X/main/Speed%20Hub%20X.lua", true))()
+  	end    
+})
+
+ScriptTab:AddButton({
+	Name = "Grow a Garden",
+	Callback = function()
+      		loadstring(game:HttpGet("https://raw.githubusercontent.com/ArdyBotzz/NatHub/refs/heads/master/NatHub.lua"))()
+  	end    
+})
+
+ScriptTab:AddButton({
+	Name = "Infinity yield",
+	Callback = function()
+      		loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
+  	end    
+})
+
+ScriptTab:AddButton({
+	Name = "Skibidi",
+	Callback = function()
+      		loadstring(game:HttpGet("https://raw.githubusercontent.com/QuorumHub1/QuorumHub/refs/heads/main/SbsdAutofarmV3.txt"))()
+  	end    
+})
+
+ScriptTab:AddButton({
+	Name = "DeadRailsBonds",
+	Callback = function()
+      		loadstring(game:HttpGet("https://raw.githubusercontent.com/thantzy/thanhub/refs/heads/main/thanv1"))()
+  	end    
+})
+
+ScriptTab:AddButton({
+	Name = "DeadRailsBonds2",
+	Callback = function()
+      		loadstring(game:HttpGet("https://getnative.cc/script/loader"))()
+  	end    
+})
+
+ScriptTab:AddButton({
+	Name = "DeadRailsAutoWin",
+	Callback = function()
+      		loadstring(game:HttpGet("https://raw.githubusercontent.com/gumanba/Scripts/main/DeadRails"))()
+  	end    
+})
+
+ScriptTab:AddButton({
+	Name = "Blox Fruits Script",
+	Callback = function()
+      		loadstring(game:HttpGet("https://raw.githubusercontent.com/tlredz/Scripts/refs/heads/main/main.luau"))()
+  	end    
 })
