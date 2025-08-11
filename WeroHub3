@@ -87,9 +87,14 @@ StealTab:AddToggle({
     end
 })
 
--- En la tab ESPTab, creamos un toggle por cada brainrot
+-- Crear sección en ESPTab para los toggles de brainrots
+local brainrotSection = ESPTab:AddSection({
+    Name = "Brainrots Selección"
+})
+
+-- Agregar toggles dentro de la sección
 for _, name in ipairs(brainrotNames) do
-    ESPTab:AddToggle({
+    brainrotSection:AddToggle({
         Name = name,
         Default = false,
         Callback = function(enabled)
@@ -198,4 +203,3 @@ RunService.Heartbeat:Connect(function()
         end
     end
 end)
-
