@@ -8,60 +8,20 @@ local StealTab = Window:MakeTab({
 	PremiumOnly = false
 })
 
+local ESPTab = Window:MakeTab({
+    Name = "ESP Brainrots",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
-local respawnConnection
-local originalJumpPower
-
-StealTab:AddToggle({
-    Name = "Jump Boost 100 Bypass",
-    Default = false,
-    Callback = function(enabled)
-        local function applyJumpBoost()
-            local char = player.Character
-            if not char then return end
-            local humanoid = char:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                humanoid.UseJumpPower = true
-                originalJumpPower = originalJumpPower or humanoid.JumpPower
-                humanoid.JumpPower = 100
-                humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
-                humanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall, true)
-            end
-        end
-
-        local function removeJumpBoost()
-            local char = player.Character
-            if not char then return end
-            local humanoid = char:FindFirstChildOfClass("Humanoid")
-            if humanoid and originalJumpPower then
-                humanoid.JumpPower = originalJumpPower
-            end
-        end
-
-        if enabled then
-            applyJumpBoost()
-
-            -- Reaplicar al respawn
-            respawnConnection = player.CharacterAdded:Connect(function(char)
-                char:WaitForChild("Humanoid")
-                task.wait(0.2)
-                applyJumpBoost()
-            end)
-        else
-            removeJumpBoost()
-
-            if respawnConnection then
-                respawnConnection:Disconnect()
-                respawnConnection = nil
-            end
-        end
-    end
-})
-
 local RunService = game:GetService("RunService")
 local workspace = game:GetService("Workspace")
+
+local respawnConnection
+local originalJumpPower
 
 local selectedBrainrots = {}
 local espBrainrotsEnabled = false
@@ -113,13 +73,7 @@ local brainrotNames = {
     "Karkerkar Kurkur"
 }
 
-local ESPTab = Window:MakeTab({
-    Name = "ESP Brainrots",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
-})
-
--- Toggle general en Steal a Brainrot
+-- Toggle general en StealTab para activar/desactivar ESP
 StealTab:AddToggle({
     Name = "ESP Brainrots",
     Default = false,
@@ -133,6 +87,7 @@ StealTab:AddToggle({
     end
 })
 
+-- En la tab ESPTab, creamos un toggle por cada brainrot
 for _, name in ipairs(brainrotNames) do
     ESPTab:AddToggle({
         Name = name,
@@ -150,7 +105,7 @@ for _, name in ipairs(brainrotNames) do
     })
 end
 
--- Función para limpiar ESP
+-- Función para limpiar los highlights y guis
 function clearESP()
     for _, v in pairs(workspace:GetDescendants()) do
         if v:IsA("Highlight") and v.Name == "BrainrotESP" then
@@ -162,7 +117,7 @@ function clearESP()
     trackedBrainrots = {}
 end
 
--- Función para actualizar ESP
+-- Función para crear ESP
 function updateESP()
     clearESP()
     if not espBrainrotsEnabled then return end
@@ -184,7 +139,6 @@ function updateESP()
                                 if primary then model.PrimaryPart = primary else continue end
                             end
 
-                            -- Highlight
                             local highlight = Instance.new("Highlight")
                             highlight.Name = "BrainrotESP"
                             highlight.FillColor = Color3.fromRGB(255, 255, 0)
@@ -194,7 +148,6 @@ function updateESP()
                             highlight.Adornee = model
                             highlight.Parent = model
 
-                            -- BillboardGui con nombre
                             local billboard = Instance.new("BillboardGui")
                             billboard.Name = "BrainrotName"
                             billboard.Size = UDim2.new(0, 200, 0, 50)
@@ -230,7 +183,7 @@ function updateESP()
     end
 end
 
--- Limpieza automática
+-- Limpieza automática si el modelo desaparece
 RunService.Heartbeat:Connect(function()
     if not espBrainrotsEnabled then return end
     for model in pairs(trackedBrainrots) do
@@ -245,3 +198,4 @@ RunService.Heartbeat:Connect(function()
         end
     end
 end)
+
