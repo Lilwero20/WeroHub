@@ -1,69 +1,40 @@
--- Capturar prints en TextLabel
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-
--- Crear GUI para mensajes si no existe
-if not PlayerGui:FindFirstChild("MensajesGUI") then
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "MensajesGUI"
-    screenGui.ResetOnSpawn = false
-    screenGui.Parent = PlayerGui
-
-    local mensajeLabel = Instance.new("TextLabel")
-    mensajeLabel.Name = "MensajeLabel"
-    mensajeLabel.Text = ""
-    mensajeLabel.Size = UDim2.new(0.3, 0, 0.07, 0)
-    mensajeLabel.Position = UDim2.new(0.35, 0, 0.05, 0)
-    mensajeLabel.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    mensajeLabel.TextColor3 = Color3.fromRGB(0, 255, 127)
-    mensajeLabel.TextSize = 18
-    mensajeLabel.Font = Enum.Font.GothamBold
-    mensajeLabel.Visible = false
-    mensajeLabel.BackgroundTransparency = 0.2
-    mensajeLabel.TextScaled = true
-    mensajeLabel.BorderSizePixel = 0
-    mensajeLabel.Parent = screenGui
-end
-
--- Redirigir print a TextLabel y consola
-local originalPrint = print
-print = function(...)
-    local args = {...}
-    local text = ""
-    for i, v in ipairs(args) do
-        text = text .. tostring(v)
-        if i < #args then text = text .. " " end
-    end
-    -- Mostrar en consola
-    originalPrint(text)
-    -- Mostrar en GUI
-    local gui = PlayerGui:WaitForChild("MensajesGUI")
-    local label = gui:WaitForChild("MensajeLabel")
-    label.Text = text
-    label.Visible = true
-    task.delay(3, function()
-        label.Visible = false
-    end)
-end
-
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "WeroHub",
-    Icon = 89001596756285,
-    LoadingTitle = "Loading WeroHub",
-    LoadingSubtitle = "by Wero",
-    Theme = "Amethyst",
-    DisableRayfieldPrompts = false,
-    DisableBuildWarnings = false,
-    ConfigurationSaving = { Enabled = true, FolderName = nil, FileName = "Big Hub" },
-    Discord = { Enabled = false, Invite = "noinvitelink", RememberJoins = true },
-    KeySystem = false,
-    KeySettings = {
-        Title = "Untitled", Subtitle = "Key System", Note = "No method of obtaining the key is provided",
-        FileName = "Key", SaveKey = true, GrabKeyFromSite = false, Key = {"Hello"}
-    }
+   Name = "WeroHub",
+   Icon = 0, -- Icon in Topbar. Can use Lucide Icons (string) or Roblox Image (number). 0 to use no icon (default).
+   LoadingTitle = "Loading...",
+   LoadingSubtitle = "by WeroScripts",
+   ShowText = "Rayfield", -- for mobile users to unhide rayfield, change if you'd like
+   Theme = "Amethyst", -- Check https://docs.sirius.menu/rayfield/configuration/themes
+
+   ToggleUIKeybind = "K", -- The keybind to toggle the UI visibility (string like "K" or Enum.KeyCode)
+
+   DisableRayfieldPrompts = false,
+   DisableBuildWarnings = false, -- Prevents Rayfield from warning when the script has a version mismatch with the interface
+
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = nil, -- Create a custom folder for your hub/game
+      FileName = "WeroHubs"
+   },
+
+   Discord = {
+      Enabled = false, -- Prompt the user to join your Discord server if their executor supports it
+      Invite = "noinvitelink", -- The Discord invite code, do not include discord.gg/. E.g. discord.gg/ ABCD would be ABCD
+      RememberJoins = true -- Set this to false to make them join the discord every time they load it up
+   },
+
+   KeySystem = false, -- Set this to true to use our key system
+   KeySettings = {
+      Title = "Untitled",
+      Subtitle = "Key System",
+      Note = "No method of obtaining the key is provided", -- Use this to tell the user how to get a key
+      FileName = "Key", -- It is recommended to use something unique as other scripts using Rayfield may overwrite your key file
+      SaveKey = true, -- The user's key will be saved, but if you change the key, they will be unable to use your script
+      GrabKeyFromSite = false, -- If this is true, set Key below to the RAW site you would like Rayfield to get the key from
+      Key = {"Hello"} -- List of keys that will be accepted by the system, can be RAW file links (pastebin, github etc) or simple strings ("hello","key22")
+   }
 })
 
 -- Tab Creation
@@ -246,9 +217,9 @@ local function setSpeed(value)
 end
 
 StealTab:CreateToggle({
-    Name = "Speed 72 Bypass",
+    Name = "Speed 78 Bypass",
     CurrentValue = false,
-    Flag = "Speed72Bypass",
+    Flag = "Speed78Bypass",
     Callback = function(active)
         local character = localPlayer.Character
         if not character then return end
@@ -261,16 +232,16 @@ StealTab:CreateToggle({
             end
 
             -- Activar velocidad 72
-            setSpeed(72)
+            setSpeed(78)
 
             -- Conexión para asegurarse que se mantenga la velocidad 60 si la modifican
             speedToggleConnection = humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
-                if humanoid.WalkSpeed ~= 72 then
-                    humanoid.WalkSpeed = 72
+                if humanoid.WalkSpeed ~= 78 then
+                    humanoid.WalkSpeed = 78
                 end
             end)
 
-            print("Speed 72 Bypass activado")
+            print("Speed 78 Bypass activado")
         else
             -- Restaurar velocidad original
             if originalSpeed then
@@ -284,19 +255,80 @@ StealTab:CreateToggle({
                 speedToggleConnection = nil
             end
 
-            print("Speed 72 Bypass desactivado")
+            print("Speed 78 Bypass desactivado")
         end
     end,
 })
 
 StealTab:CreateParagraph({
-    Title = "Speed Boost 72 Bypass Tutorial (English)",
-    Content = "if you cant  walk normally, buy speed coil first equip it, turn on the speed toggle and walk and unequip the speed coil, and now you can run"
+    Title = "Speed Boost 78 Bypass Tutorial (English)",
+    Content = "if you cant  walk normally, buy speed invisibility cloak first equip it, turn on the speed toggle and walk and unequip the speed coil, and now you can run"
 })
 
 StealTab:CreateParagraph({
-    Title = "Speed Boost 72 Bypass Tutorial (Español/Spanish)",
-    Content = "Si no puedes caminar normalmente, primero compra la Speed Coil, equípala, enciende el interruptor de velocidad (speed toggle) y camina. Luego, desequipa la Speed Coil, y ahora podrás correr."
+    Title = "Speed Boost 78 Bypass Tutorial (Español/Spanish)",
+    Content = "Si no puedes caminar normalmente, primero compra la capa de invisibilidad, equípala, enciende el interruptor de velocidad (speed toggle) y camina. Luego, desequipa la Speed Coil, y ahora podrás correr."
+})
+
+StealTab:CreateParagraph({
+    Title = "Speed Boost 60 Bypass Tutorial (sin capa) (Español/Spanish)",
+    Content = "Si no puedes caminar normalmente, primero compra el Speed Coil, equípala, enciende el interruptor de velocidad (speed toggle) y camina. Luego, desequipa la Speed Coil, y ahora podrás correr."
+})
+
+local originalSpeed = nil
+local speedToggleConnection = nil
+
+local function setSpeed(value)
+    local character = localPlayer.Character
+    if not character then return end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.WalkSpeed = value
+    end
+end
+
+StealTab:CreateToggle({
+    Name = "Speed 60 Bypass",
+    CurrentValue = false,
+    Flag = "Speed60Bypass",
+    Callback = function(active)
+        local character = localPlayer.Character
+        if not character then return end
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if not humanoid then return end
+
+        if active then
+            if not originalSpeed then
+                originalSpeed = humanoid.WalkSpeed
+            end
+
+            -- Activar velocidad 72
+            setSpeed(60)
+
+            -- Conexión para asegurarse que se mantenga la velocidad 60 si la modifican
+            speedToggleConnection = humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+                if humanoid.WalkSpeed ~= 60 then
+                    humanoid.WalkSpeed = 60
+                end
+            end)
+
+            print("Speed 60 Bypass activado")
+        else
+            -- Restaurar velocidad original
+            if originalSpeed then
+                setSpeed(originalSpeed)
+            else
+                setSpeed(34) -- Valor por defecto común
+            end
+
+            if speedToggleConnection then
+                speedToggleConnection:Disconnect()
+                speedToggleConnection = nil
+            end
+
+            print("Speed 60 Bypass desactivado")
+        end
+    end,
 })
 
 local Players = game:GetService("Players")
@@ -476,20 +508,12 @@ StealTab:CreateToggle({
 
 local selectedBrainrots = {}
 local espBrainrotsEnabled = false
+local trackedBrainrots = {} -- Para rastrear y limpiar si desaparecen
 
 -- DROPDOWN
 StealTab:CreateDropdown({
     Name = "Brainrots",
     Options = {
-        "Noobini Pizzanini", "Lirilí Larilá", "Tim Cheese", "Fluriflura", "Talpa Di Fero",
-        "Svinina Bombardino", "Pipi Kiwi", "Trippi Troppi", "Tung Tung Tung Sahur",
-        "Gangster Footera", "Bobrito Bandito", "Boneca Ambalabu", "Ta Ta Ta Ta Sahur",
-        "Tric Trac Baraboom", "Cacto Hipopotamo", "Cappuccino Assassino", "Brr Brr Patapim",
-        "Trulimero Trulicina", "Bambini Crostini", "Bananita Dolphinita", "Perochello Lemonchello",
-        "Brri Brri Bicus Dicus Bombicus", "Avocadini Guffo", "Burbaloni Loliloli",
-        "Chimpanzini Bananini", "Ballerina Cappuccina", "Chef Crabracadabra",
-        "Glorbo Fruttodrillo", "Blueberrinni Octopusini", "Strawberelli Flamingelli",
-        "Pandaccini Bananini", "Frigo Camelo", "Orangutini Ananassini", "Rhino Toasterino",
         "Bombardiro Crocodilo", "Bombombini Gusini", "Cavallo Virtuoso", "Spioniro Golubiro",
         "Tigrulini Watermellini", "Zibra Zubra Zibralini", "Cocofanto Elefanto",
         "Gattatino Nyanino", "Girafa Celestre", "Tralalero Tralala", "Matteo",
@@ -500,7 +524,7 @@ StealTab:CreateDropdown({
         "Tortugini Dragonfruitini", "Pot Hotspot", "Nuclearo Dinosauro"
     },
     CurrentOption = {},
-    MultiSelect = true,
+    MultipleOptions = true,
     Callback = function(selected)
         selectedBrainrots = selected
         print("Seleccionaste: " .. table.concat(selected, ", "))
@@ -516,13 +540,16 @@ StealTab:CreateToggle({
     CurrentValue = false,
     Callback = function(Value)
         espBrainrotsEnabled = Value
-        updateESP()
+        if Value then
+            updateESP()
+        else
+            clearESP()
+        end
     end
 })
 
--- FUNCIÓN DE ESP
-function updateESP()
-    -- Elimina ESPs viejos
+-- FUNCIÓN DE LIMPIEZA
+function clearESP()
     for _, v in pairs(workspace:GetDescendants()) do
         if v:IsA("Highlight") and v.Name == "BrainrotESP" then
             v:Destroy()
@@ -530,11 +557,14 @@ function updateESP()
             v:Destroy()
         end
     end
+    trackedBrainrots = {}
+end
 
-    -- Si está apagado, salir
+-- FUNCIÓN DE ESP
+function updateESP()
+    clearESP()
     if not espBrainrotsEnabled then return end
 
-    -- Buscar en cada plot
     for _, plot in pairs(workspace:WaitForChild("Plots"):GetChildren()) do
         local animalPodiums = plot:FindFirstChild("AnimalPodiums")
         if animalPodiums then
@@ -544,6 +574,11 @@ function updateESP()
                     if table.find(selectedBrainrots, brainrotName) then
                         local model = descendant:FindFirstAncestorOfClass("Model")
                         if model and not model:FindFirstChild("BrainrotESP") then
+                            if not model.PrimaryPart then
+                                local primary = model:FindFirstChildWhichIsA("BasePart")
+                                if primary then model.PrimaryPart = primary else continue end
+                            end
+
                             -- Highlight
                             local highlight = Instance.new("Highlight")
                             highlight.Name = "BrainrotESP"
@@ -554,12 +589,13 @@ function updateESP()
                             highlight.Adornee = model
                             highlight.Parent = model
 
-                            -- Billboard con el nombre
+                            -- Billboard
                             local billboard = Instance.new("BillboardGui")
                             billboard.Name = "BrainrotName"
                             billboard.Size = UDim2.new(0, 200, 0, 50)
                             billboard.StudsOffset = Vector3.new(0, 3, 0)
                             billboard.AlwaysOnTop = true
+                            billboard.Adornee = model.PrimaryPart
                             billboard.Parent = model
 
                             local label = Instance.new("TextLabel")
@@ -571,6 +607,18 @@ function updateESP()
                             label.Font = Enum.Font.GothamBold
                             label.TextScaled = true
                             label.Parent = billboard
+
+                            trackedBrainrots[model] = true
+
+                            -- Limpieza automática si se mueve fuera del workspace
+                            model.AncestryChanged:Connect(function(_, parent)
+                                if not parent then
+                                    if model:FindFirstChild("BrainrotESP") then model.BrainrotESP:Destroy() end
+                                    if model:FindFirstChild("BrainrotName") then model.BrainrotName:Destroy() end
+                                    trackedBrainrots[model] = nil
+                                    print("Se eliminó ESP porque el brainrot fue removido.")
+                                end
+                            end)
                         end
                     end
                 end
@@ -578,6 +626,23 @@ function updateESP()
         end
     end
 end
+
+-- VERIFICAR MODELOS ELIMINADOS
+game:GetService("RunService").Heartbeat:Connect(function()
+    if not espBrainrotsEnabled then return end
+    for model in pairs(trackedBrainrots) do
+        if not model:IsDescendantOf(workspace) then
+            if model:FindFirstChild("BrainrotESP") then
+                model.BrainrotESP:Destroy()
+            end
+            if model:FindFirstChild("BrainrotName") then
+                model.BrainrotName:Destroy()
+            end
+            trackedBrainrots[model] = nil
+            print("Se eliminó el ESP de un brainrot que ya no existe.")
+        end
+    end
+end)
 
 
 local jumpBoostConnection
@@ -634,9 +699,9 @@ StealTab:CreateToggle({
 })
 
 StealTab:CreateButton({
-    Name = "Únete a Discord: https://discord.gg/UcsPnpeF",
+    Name = "Únete a Discord: https://discord.gg/EmsvzWF3xK",
     Callback = function()
-        local url = "https://discord.gg/UcsPnpeF"
+        local url = "https://discord.gg/EmsvzWF3xK"
         if syn and syn.open then
             syn.open(url) -- Synapse X
         elseif KRNL_LOADED and setclipboard then
@@ -673,18 +738,24 @@ StealTab:CreateParagraph({
     Content = "Advertencia: Este script está en BETA, puede que no funcione correctamente"
 })
 
+Rayfield:LoadConfiguration({
+    Name = "WeroHub",
+    ConfigurationName = "WeroHubConfig",
+    ConfigurationFolder = "WeroHubConfigs"
+})
+
 -- ============================================================
 -- SCRIPTS TAB
 -- ============================================================
 
-ScriptsTab:CreateButton({Name="Steal a Brainrot Devil's Ugly(UNPATCHED)", Callback=function()
+ScriptsTab:CreateButton({Name="Steal a Brainrot CobraHub(UNPATCHED, NEW)", Callback=function()
 print("Steal a Brainrot Script Executed")
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/DynaFetchy/Scripts/refs/heads/main/Loader.lua"))()
+    loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/705e9a93cc18214fb77ab95686a8dba9.lua"))()
 end})
 
-ScriptsTab:CreateButton({Name="Steal a Brainrot MoonHub(UNPATCHED)", Callback=function()
+ScriptsTab:CreateButton({Name="Steal a Brainrot PetFinder(UNPATCHED)", Callback=function()
 print("Steal a Brainrot Script Executed")
-    loadstring(game:HttpGet('https://raw.githubusercontent.com/KaspikScriptsRb/steal-a-brainrot/refs/heads/main/.lua'))()
+    loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/16fe150cb70da9cec413cb0f526737c0.lua"))()
 end})
 
 ScriptsTab:CreateButton({Name="Steal a Brainrot Spawner(Visual)", Callback=function()
@@ -698,7 +769,7 @@ print("Steal a Brainrot Script Executed")
 end})
 
 
-ScriptsTab:CreateButton({Name="Steal a Brainrot Arbix(UNPATCHED)", Callback=function()
+ScriptsTab:CreateButton({Name="Steal a Brainrot Arbix(PATCHED)", Callback=function()
 print("Steal a Brainrot Script Executed")
     loadstring(game:HttpGet("https://raw.githubusercontent.com/Youifpg/Steal-a-Brianrot/refs/heads/main/original_script-obfuscated.lua"))()
 end})
@@ -739,9 +810,9 @@ print("Infinity Yield Executed")
     loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
 end})
 
-ScriptsTab:CreateButton({Name="Dex", Callback=function()
-print("Dex Executed")
-    loadstring(game:HttpGet("https://pastebin.com/raw/FeMbE4xS"))()
+ScriptsTab:CreateButton({Name="Skibidi", Callback=function()
+print("Skibidi Executed")
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/QuorumHub1/QuorumHub/refs/heads/main/SbsdAutofarmV3.txt"))()
 end})
 
 ScriptsTab:CreateButton({Name="DeadRailsBonds", Callback=function()
@@ -838,69 +909,6 @@ MiscTab:CreateToggle({
 })
 
 MiscTab:CreateToggle({
-	Name = "📍 Mostrar posición actual",
-	CurrentValue = false,
-	Callback = function(Value)
-		local player = game.Players.LocalPlayer
-		local RunService = game:GetService("RunService")
-		local guiName = "PosicionGUI"
-		local connection
-
-		if Value then
-			-- Crear GUI y TextLabel si no existe
-			local gui = player:FindFirstChild("PlayerGui"):FindFirstChild(guiName)
-			if not gui then
-				gui = Instance.new("ScreenGui")
-				gui.Name = guiName
-				gui.ResetOnSpawn = false
-				gui.Parent = player:WaitForChild("PlayerGui")
-			end
-
-			local label = gui:FindFirstChild("PosLabel")
-			if not label then
-				label = Instance.new("TextLabel")
-				label.Name = "PosLabel"
-				label.Size = UDim2.new(0, 300, 0, 30)
-				label.Position = UDim2.new(0, 10, 0, 10)
-				label.BackgroundColor3 = Color3.new(0, 0, 0)
-				label.BackgroundTransparency = 0.3
-				label.TextColor3 = Color3.new(1, 1, 1)
-				label.TextScaled = true
-				label.Font = Enum.Font.SourceSansBold
-				label.Text = "Posición: "
-				label.Parent = gui
-			end
-
-			label.Visible = true
-
-			-- Iniciar actualizador de posición
-			connection = RunService.RenderStepped:Connect(function()
-				if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-					local pos = player.Character.HumanoidRootPart.Position
-					label.Text = string.format("Posición: (%.1f, %.1f, %.1f)", pos.X, pos.Y, pos.Z)
-				end
-			end)
-
-			-- Guardar la conexión para desconectar luego
-			gui:SetAttribute("UpdaterConnection", connection)
-		else
-			local gui = player:FindFirstChild("PlayerGui"):FindFirstChild(guiName)
-			if gui then
-				local label = gui:FindFirstChild("PosLabel")
-				if label then label:Destroy() end
-
-				local conn = gui:GetAttribute("UpdaterConnection")
-				if conn then
-					pcall(function() conn:Disconnect() end)
-				end
-
-				gui:Destroy()
-			end
-		end
-	end,
-})
-
-MiscTab:CreateToggle({
 	Name = "💨 Mostrar velocidad actual",
 	CurrentValue = false,
 	Callback = function(Value)
@@ -960,72 +968,5 @@ MiscTab:CreateToggle({
 		end
 	end,
 })
-
-MiscTab:CreateToggle({
-    Name = "🕒 Mostrar hora actual en México",
-    CurrentValue = false,
-    Callback = function(Value)
-        local player = game.Players.LocalPlayer
-        local RunService = game:GetService("RunService")
-        local guiName = "HoraMexicoGUI"
-        local connection
-
-        if Value then
-            -- Crear GUI y TextLabel si no existe
-            local gui = player:FindFirstChild("PlayerGui"):FindFirstChild(guiName)
-            if not gui then
-                gui = Instance.new("ScreenGui")
-                gui.Name = guiName
-                gui.ResetOnSpawn = false
-                gui.Parent = player:WaitForChild("PlayerGui")
-            end
-
-            local label = gui:FindFirstChild("HoraLabel")
-            if not label then
-                label = Instance.new("TextLabel")
-                label.Name = "HoraLabel"
-                label.Size = UDim2.new(0, 300, 0, 30)
-                label.Position = UDim2.new(0, 10, 0, 10)
-                label.BackgroundColor3 = Color3.new(0, 0, 0)
-                label.BackgroundTransparency = 0.3
-                label.TextColor3 = Color3.new(1, 1, 1)
-                label.TextScaled = true
-                label.Font = Enum.Font.SourceSansBold
-                label.Text = "Hora de México: "
-                label.Parent = gui
-            end
-
-            label.Visible = true
-
-            -- Iniciar actualizador de hora
-            connection = RunService.RenderStepped:Connect(function()
-                local currentTime = os.date("!*t", os.time()) -- Obtiene hora UTC
-                -- Convertir la hora UTC a hora de México (zona horaria UTC -6)
-                currentTime.hour = currentTime.hour - 6
-                if currentTime.hour < 0 then
-                    currentTime.hour = currentTime.hour + 24
-                end
-                label.Text = string.format("Hora de México: %02d:%02d:%02d", currentTime.hour, currentTime.min, currentTime.sec)
-            end)
-
-            -- Guardar la conexión para desconectar luego
-            gui:SetAttribute("TimeConnection", connection)
-        else
-            local gui = player:FindFirstChild("PlayerGui"):FindFirstChild(guiName)
-            if gui then
-                local label = gui:FindFirstChild("HoraLabel")
-                if label then label:Destroy() end
-
-                local conn = gui:GetAttribute("TimeConnection")
-                if conn then
-                    pcall(function() conn:Disconnect() end)
-                end
-
-                gui:Destroy()
-            end
-        end
-    end,
-})
-
 
 -- End of WeroHub Script
