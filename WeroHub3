@@ -6,6 +6,7 @@ local ScriptTab = Window:MakeTab({
 	Name = "Scripts",
 	Icon = "rbxassetid://4483345998",
 	PremiumOnly = false
+})
 
 local StealTab = Window:MakeTab({
 	Name = "Steal a Brainrot(in development)",
