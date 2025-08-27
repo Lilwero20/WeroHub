@@ -19,18 +19,18 @@ local holdStart = 0
 -- =================================
 local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 screenGui.Name = "TaserToggleGUI"
+screenGui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", screenGui)
 frame.Size = UDim2.new(0, 150, 0, 50)
 frame.Position = UDim2.new(0.05, 0, 0.3, 0)
 frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 frame.BorderSizePixel = 0
-frame.Active = true
-frame.Draggable = true
 frame.BackgroundTransparency = 0.2
 frame.ZIndex = 10
 Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
 
+-- 🔹 Toggle Button
 local toggleButton = Instance.new("TextButton", frame)
 toggleButton.Size = UDim2.new(1, -10, 1, -10)
 toggleButton.Position = UDim2.new(0, 5, 0, 5)
@@ -40,6 +40,7 @@ toggleButton.TextSize = 20
 toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 toggleButton.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
 toggleButton.AutoButtonColor = true
+toggleButton.Active = true -- ✅ el botón sí recibe taps/clicks
 Instance.new("UICorner", toggleButton).CornerRadius = UDim.new(0, 10)
 
 -- 🔹 Botón para móviles (oculto hasta ON)
@@ -55,9 +56,35 @@ mobileBtn.Visible = false
 Instance.new("UICorner", mobileBtn).CornerRadius = UDim.new(1, 0)
 
 -- =================================
+-- 🔹 Hacer que el Frame sea draggable sin bloquear botones
+-- =================================
+local dragging = false
+local dragStart, startPos
+
+frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+    end
+end)
+
+frame.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+-- =================================
 -- 🔹 Funciones
 -- =================================
-
 local function buyAndEquip()
     local success, result = pcall(function()
         return RFCoinsShopServiceRequestBuy:InvokeServer(toolName)
@@ -79,14 +106,13 @@ local function useTaserAndTeleport()
 
     if hrp then
         REUseItem:FireServer(hrp)
-
         -- TP 10 studs a la izquierda
         local leftVector = -hrp.CFrame.RightVector * 10
         hrp.CFrame = hrp.CFrame + leftVector
     end
 end
 
--- 🔹 Detectar HOLD para PC (E)
+-- 🔹 Detectar HOLD para PC
 local function setupPCControls()
     UserInputService.InputBegan:Connect(function(input, gp)
         if running and input.KeyCode == Enum.KeyCode.E and not gp then
@@ -107,9 +133,8 @@ local function setupPCControls()
     end)
 end
 
--- 🔹 Detectar HOLD para Móvil (Botón en pantalla)
+-- 🔹 Detectar HOLD para Móvil
 local function setupMobileControls()
-    local touchStart
     mobileBtn.MouseButton1Down:Connect(function()
         if running then
             holding = true
@@ -133,7 +158,7 @@ end
 local function startTaser()
     running = true
     buyAndEquip()
-    mobileBtn.Visible = true -- botón para móviles
+    mobileBtn.Visible = UserInputService.TouchEnabled
 end
 
 local function stopTaser()
