@@ -1,1290 +1,184 @@
--- Gui to Lua
--- Version: 3.2
+-- 🔹 Script Local (StarterGui o StarterPlayerScripts)
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer
 
--- Instances:
+-- 🔹 Remotes
+local RFCoinsShopServiceRequestBuy = ReplicatedStorage.Packages.Net["RF/CoinsShopService/RequestBuy"] -- RemoteFunction
+local REUseItem = ReplicatedStorage.Packages.Net["RE/UseItem"]
 
-local ScreenGui = Instance.new("ScreenGui")
-local Boost = Instance.new("Frame")
-local UICorner = Instance.new("UICorner")
-local TextButton = Instance.new("TextButton")
-local UICorner_2 = Instance.new("UICorner")
-local Frame = Instance.new("Frame")
-local UICorner_3 = Instance.new("UICorner")
-local Diplay = Instance.new("TextButton")
-local UICorner_4 = Instance.new("UICorner")
-local part = Instance.new("TextButton")
-local UICorner_5 = Instance.new("UICorner")
-local Display = Instance.new("TextButton")
-local UICorner_6 = Instance.new("UICorner")
-local mn = Instance.new("TextButton")
-local UICorner_7 = Instance.new("UICorner")
-local vs = Instance.new("TextButton")
-local UICorner_8 = Instance.new("UICorner")
-local spe = Instance.new("TextButton")
-local UICorner_9 = Instance.new("UICorner")
-local spebrain = Instance.new("TextButton")
-local UICorner_10 = Instance.new("UICorner")
-local part_2 = Instance.new("Frame")
-local UICorner_11 = Instance.new("UICorner")
-local TextButton_2 = Instance.new("TextButton")
-local UICorner_12 = Instance.new("UICorner")
-local ImageButton = Instance.new("ImageButton")
-local UICorner_13 = Instance.new("UICorner")
-local UIAspectRatioConstraint = Instance.new("UIAspectRatioConstraint")
-local stlr = Instance.new("Frame")
-local TextLabel = Instance.new("TextLabel")
-local Diplay_2 = Instance.new("TextButton")
-local UICorner_14 = Instance.new("UICorner")
-local part_3 = Instance.new("TextButton")
-local UICorner_15 = Instance.new("UICorner")
-local TextButton_3 = Instance.new("TextButton")
-local UICorner_16 = Instance.new("UICorner")
-local UICorner_17 = Instance.new("UICorner")
+-- 🔹 Variables
+local running = false
+local toolName = "Taser Gun"
+local holding = false
+local holdStart = 0
+local holdDetected = false
 
---Properties:
+-- =================================
+-- 🔹 GUI Toggle
+-- =================================
+local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+screenGui.Name = "TaserToggleGUI"
+screenGui.ResetOnSpawn = false
 
-ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+local frame = Instance.new("Frame", screenGui)
+frame.Size = UDim2.new(0, 150, 0, 50)
+frame.Position = UDim2.new(0.05, 0, 0.3, 0)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+frame.BorderSizePixel = 0
+frame.BackgroundTransparency = 0.2
+frame.ZIndex = 10
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
 
-Boost.Name = "Boost"
-Boost.Parent = ScreenGui
-Boost.BackgroundColor3 = Color3.fromRGB(34, 35, 55)
-Boost.BorderColor3 = Color3.fromRGB(0, 0, 0)
-Boost.BorderSizePixel = 0
-Boost.Position = UDim2.new(0.24401544, 0, 0.39103362, 0)
-Boost.Size = UDim2.new(0, 219, 0, 97)
-Boost.Visible = false
+-- 🔹 Toggle Button
+local toggleButton = Instance.new("TextButton", frame)
+toggleButton.Size = UDim2.new(1, -10, 1, -10)
+toggleButton.Position = UDim2.new(0, 5, 0, 5)
+toggleButton.Text = "🔴 OFF"
+toggleButton.Font = Enum.Font.GothamBold
+toggleButton.TextSize = 20
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
+toggleButton.AutoButtonColor = true
+toggleButton.Active = true
+Instance.new("UICorner", toggleButton).CornerRadius = UDim.new(0, 10)
 
-UICorner.Parent = Boost
+-- 🔹 Botón para móviles (oculto hasta ON)
+local mobileBtn = Instance.new("TextButton", screenGui)
+mobileBtn.Size = UDim2.new(0, 80, 0, 80)
+mobileBtn.Position = UDim2.new(0.85, 0, 0.75, 0)
+mobileBtn.Text = "E"
+mobileBtn.Font = Enum.Font.GothamBold
+mobileBtn.TextSize = 26
+mobileBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+mobileBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 100)
+mobileBtn.Visible = false
+Instance.new("UICorner", mobileBtn).CornerRadius = UDim.new(1, 0)
 
-TextButton.Parent = Boost
-TextButton.BackgroundColor3 = Color3.fromRGB(128, 128, 128)
-TextButton.BorderColor3 = Color3.fromRGB(0, 0, 0)
-TextButton.BorderSizePixel = 0
-TextButton.Position = UDim2.new(0.0410958901, 0, 0.391752571, 0)
-TextButton.Size = UDim2.new(0, 200, 0, 50)
-TextButton.Font = Enum.Font.FredokaOne
-TextButton.Text = "Jump Boost: Off"
-TextButton.TextColor3 = Color3.fromRGB(0, 0, 0)
-TextButton.TextScaled = true
-TextButton.TextSize = 14.000
-TextButton.TextWrapped = true
+-- =================================
+-- 🔹 Hacer que el Frame sea draggable
+-- =================================
+local dragging = false
+local dragStart, startPos
+frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+    end
+end)
+frame.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
 
-UICorner_2.Parent = TextButton
+-- =================================
+-- 🔹 Funciones
+-- =================================
+local function buyAndEquip()
+    local success, result = pcall(function()
+        return RFCoinsShopServiceRequestBuy:InvokeServer(toolName)
+    end)
+    if not success then warn("Error al comprar:", result) end
 
-Frame.Parent = ScreenGui
-Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-Frame.BackgroundTransparency = 0.250
-Frame.BorderColor3 = Color3.fromRGB(136, 22, 165)
-Frame.BorderSizePixel = 6
-Frame.Position = UDim2.new(0.326211929, 0, 0.112592481, 0)
-Frame.Size = UDim2.new(0, 230, 0, 288)
-
-UICorner_3.CornerRadius = UDim.new(0, 18)
-UICorner_3.Parent = Frame
-
-Diplay.Name = "Diplay"
-Diplay.Parent = Frame
-Diplay.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
-Diplay.BorderColor3 = Color3.fromRGB(0, 0, 0)
-Diplay.BorderSizePixel = 0
-Diplay.LayoutOrder = 1
-Diplay.Position = UDim2.new(0.0857321024, 0, 0.21513854, 0)
-Diplay.Size = UDim2.new(0, 189, 0, 58)
-Diplay.Font = Enum.Font.FredokaOne
-Diplay.Text = "Display Jump Boost"
-Diplay.TextColor3 = Color3.fromRGB(255, 255, 255)
-Diplay.TextScaled = true
-Diplay.TextSize = 14.000
-Diplay.TextWrapped = true
-
-UICorner_4.Parent = Diplay
-
-part.Name = "part"
-part.Parent = Frame
-part.BackgroundColor3 = Color3.fromRGB(180, 0, 60)
-part.BorderColor3 = Color3.fromRGB(0, 0, 0)
-part.BorderSizePixel = 0
-part.LayoutOrder = 3
-part.Position = UDim2.new(0.0759999976, 0, 0.470499992, 0)
-part.Size = UDim2.new(0, 190, 0, 58)
-part.Font = Enum.Font.FredokaOne
-part.Text = "Display Air Walk"
-part.TextColor3 = Color3.fromRGB(255, 255, 255)
-part.TextScaled = true
-part.TextSize = 14.000
-part.TextWrapped = true
-
-UICorner_5.Parent = part
-
-Display.Name = "Display"
-Display.Parent = Frame
-Display.BackgroundColor3 = Color3.fromRGB(180, 1, 4)
-Display.BorderColor3 = Color3.fromRGB(0, 0, 0)
-Display.BorderSizePixel = 0
-Display.LayoutOrder = 1
-Display.Position = UDim2.new(0.0886469334, 0, 0.726775706, 0)
-Display.Size = UDim2.new(0, 188, 0, 58)
-Display.Font = Enum.Font.FredokaOne
-Display.Text = "Display Auto Steal"
-Display.TextColor3 = Color3.fromRGB(255, 255, 255)
-Display.TextScaled = true
-Display.TextSize = 14.000
-Display.TextWrapped = true
-
-UICorner_6.Parent = Display
-
-mn.Name = "mn"
-mn.Parent = Frame
-mn.BackgroundColor3 = Color3.fromRGB(61, 61, 61)
-mn.BorderColor3 = Color3.fromRGB(0, 0, 0)
-mn.BorderSizePixel = 0
-mn.LayoutOrder = 1
-mn.Position = UDim2.new(0.078848958, 0, 0.0597014651, 0)
-mn.Size = UDim2.new(0, 67, 0, 32)
-mn.Font = Enum.Font.FredokaOne
-mn.Text = "Main"
-mn.TextColor3 = Color3.fromRGB(255, 255, 255)
-mn.TextScaled = true
-mn.TextSize = 14.000
-mn.TextWrapped = true
-
-UICorner_7.Parent = mn
-
-vs.Name = "vs"
-vs.Parent = Frame
-vs.BackgroundColor3 = Color3.fromRGB(61, 61, 61)
-vs.BorderColor3 = Color3.fromRGB(0, 0, 0)
-vs.BorderSizePixel = 0
-vs.LayoutOrder = 1
-vs.Position = UDim2.new(0.619781256, 0, 0.0597014651, 0)
-vs.Size = UDim2.new(0, 66, 0, 32)
-vs.Font = Enum.Font.FredokaOne
-vs.Text = "Visuals"
-vs.TextColor3 = Color3.fromRGB(255, 255, 255)
-vs.TextScaled = true
-vs.TextSize = 14.000
-vs.TextWrapped = true
-
-UICorner_8.Parent = vs
-
-spe.Name = "spe"
-spe.Parent = Frame
-spe.BackgroundColor3 = Color3.fromRGB(180, 0, 60)
-spe.BorderColor3 = Color3.fromRGB(0, 0, 0)
-spe.BorderSizePixel = 0
-spe.LayoutOrder = 2
-spe.Position = UDim2.new(0.0788489282, 0, 0.214393824, 0)
-spe.Size = UDim2.new(0, 190, 0, 58)
-spe.Visible = false
-spe.Font = Enum.Font.FredokaOne
-spe.Text = "ESP Players"
-spe.TextColor3 = Color3.fromRGB(255, 255, 255)
-spe.TextScaled = true
-spe.TextSize = 14.000
-spe.TextWrapped = true
-
-UICorner_9.Parent = spe
-
-spebrain.Name = "spe brain"
-spebrain.Parent = Frame
-spebrain.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
-spebrain.BorderColor3 = Color3.fromRGB(0, 0, 0)
-spebrain.BorderSizePixel = 0
-spebrain.LayoutOrder = 2
-spebrain.Position = UDim2.new(0.075072974, 0, 0.467452884, 0)
-spebrain.Size = UDim2.new(0, 190, 0, 60)
-spebrain.Visible = false
-spebrain.Font = Enum.Font.FredokaOne
-spebrain.Text = "ESP Best Brainrot"
-spebrain.TextColor3 = Color3.fromRGB(255, 255, 255)
-spebrain.TextScaled = true
-spebrain.TextSize = 14.000
-spebrain.TextWrapped = true
-
-UICorner_10.Parent = spebrain
-
-part_2.Name = "part"
-part_2.Parent = ScreenGui
-part_2.BackgroundColor3 = Color3.fromRGB(34, 35, 55)
-part_2.BorderColor3 = Color3.fromRGB(0, 0, 0)
-part_2.BorderSizePixel = 0
-part_2.Position = UDim2.new(0.46872586, 0, 0.39103362, 0)
-part_2.Size = UDim2.new(0, 219, 0, 97)
-part_2.Visible = false
-
-UICorner_11.Parent = part_2
-
-TextButton_2.Parent = part_2
-TextButton_2.BackgroundColor3 = Color3.fromRGB(128, 128, 128)
-TextButton_2.BorderColor3 = Color3.fromRGB(0, 0, 0)
-TextButton_2.BorderSizePixel = 0
-TextButton_2.Position = UDim2.new(0.0410958901, 0, 0.391752571, 0)
-TextButton_2.Size = UDim2.new(0, 200, 0, 50)
-TextButton_2.Font = Enum.Font.FredokaOne
-TextButton_2.Text = "Air Walk: Off"
-TextButton_2.TextColor3 = Color3.fromRGB(0, 0, 0)
-TextButton_2.TextScaled = true
-TextButton_2.TextSize = 14.000
-TextButton_2.TextWrapped = true
-
-UICorner_12.Parent = TextButton_2
-
-ImageButton.Parent = ScreenGui
-ImageButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-ImageButton.BorderColor3 = Color3.fromRGB(0, 0, 0)
-ImageButton.BorderSizePixel = 0
-ImageButton.Position = UDim2.new(0.105791509, 0, 0.271481901, 0)
-ImageButton.Size = UDim2.new(0, 69, 0, 69)
-ImageButton.Image = "rbxassetid://73521246377799"
-
-UICorner_13.Parent = ImageButton
-
-UIAspectRatioConstraint.Parent = ImageButton
-UIAspectRatioConstraint.AspectRatio = 1.022
-
-stlr.Name = "stlr"
-stlr.Parent = ScreenGui
-stlr.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-stlr.BackgroundTransparency = 0.250
-stlr.BorderColor3 = Color3.fromRGB(136, 22, 165)
-stlr.BorderSizePixel = 3
-stlr.Position = UDim2.new(0.177949384, 0, 0.188557625, 0)
-stlr.Size = UDim2.new(0, 230, 0, 279)
-stlr.Visible = false
-
-TextLabel.Parent = stlr
-TextLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-TextLabel.BackgroundTransparency = 1.000
-TextLabel.BorderColor3 = Color3.fromRGB(0, 0, 0)
-TextLabel.BorderSizePixel = 0
-TextLabel.Position = UDim2.new(0.153864726, 0, 0.832244456, 0)
-TextLabel.Size = UDim2.new(0, 158, 0, 35)
-TextLabel.Font = Enum.Font.FredokaOne
-TextLabel.Text = "WeroStealer"
-TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TextLabel.TextScaled = true
-TextLabel.TextSize = 14.000
-TextLabel.TextTransparency = 0.620
-TextLabel.TextWrapped = true
-
-Diplay_2.Name = "Diplay"
-Diplay_2.Parent = stlr
-Diplay_2.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
-Diplay_2.BorderColor3 = Color3.fromRGB(0, 0, 0)
-Diplay_2.BorderSizePixel = 0
-Diplay_2.LayoutOrder = 1
-Diplay_2.Position = UDim2.new(0.0726886243, 0, 0.207970083, 0)
-Diplay_2.Size = UDim2.new(0, 189, 0, 58)
-Diplay_2.Font = Enum.Font.FredokaOne
-Diplay_2.Text = "Save Position"
-Diplay_2.TextColor3 = Color3.fromRGB(255, 255, 255)
-Diplay_2.TextScaled = true
-Diplay_2.TextSize = 14.000
-Diplay_2.TextWrapped = true
-
-UICorner_14.Parent = Diplay_2
-
-part_3.Name = "part"
-part_3.Parent = stlr
-part_3.BackgroundColor3 = Color3.fromRGB(180, 0, 60)
-part_3.BorderColor3 = Color3.fromRGB(0, 0, 0)
-part_3.BorderSizePixel = 0
-part_3.LayoutOrder = 3
-part_3.Position = UDim2.new(0.071652092, 0, 0.531431913, 0)
-part_3.Size = UDim2.new(0, 190, 0, 58)
-part_3.Font = Enum.Font.FredokaOne
-part_3.Text = "Go to Base"
-part_3.TextColor3 = Color3.fromRGB(255, 255, 255)
-part_3.TextScaled = true
-part_3.TextSize = 14.000
-part_3.TextWrapped = true
-
-UICorner_15.Parent = part_3
-
-TextButton_3.Parent = stlr
-TextButton_3.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-TextButton_3.BorderColor3 = Color3.fromRGB(0, 0, 0)
-TextButton_3.BorderSizePixel = 0
-TextButton_3.Position = UDim2.new(0.808695674, 0, 0.027777778, 0)
-TextButton_3.Size = UDim2.new(0, 31, 0, 30)
-TextButton_3.Font = Enum.Font.FredokaOne
-TextButton_3.Text = "X"
-TextButton_3.TextColor3 = Color3.fromRGB(0, 0, 0)
-TextButton_3.TextScaled = true
-TextButton_3.TextSize = 14.000
-TextButton_3.TextWrapped = true
-
-UICorner_16.Parent = TextButton_3
-
-UICorner_17.CornerRadius = UDim.new(0, 18)
-UICorner_17.Parent = stlr
-
--- Scripts:
-
-local function NXDEYR_fake_script() -- Boost.LocalScript 
-	local script = Instance.new('LocalScript', Boost)
-
-	-- LocalScript dentro del ScreenGui o el ScrollingFrame
-	local frame = script.Parent
-	local dragging = false
-	local dragStart
-	local startPos
-	
-	local function startDrag(input)
-		dragging = true
-		dragStart = input.Position
-		startPos = frame.Position
-	
-		input.Changed:Connect(function()
-			if input.UserInputState == Enum.UserInputState.End then
-				dragging = false
-			end
-		end)
-	end
-	
-	local function drag(input)
-		if dragging then
-			local delta = input.Position - dragStart
-			frame.Position = UDim2.new(
-				startPos.X.Scale,
-				startPos.X.Offset + delta.X,
-				startPos.Y.Scale,
-				startPos.Y.Offset + delta.Y
-			)
-		end
-	end
-	
-	-- Detectar inicio de arrastre (mouse o touch)
-	frame.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			startDrag(input)
-		end
-	end)
-	
-	-- Detectar movimiento (mouse o touch)
-	frame.InputChanged:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-			drag(input)
-		end
-	end)
-	
+    task.wait(0.5)
+    local tool = player.Backpack:FindFirstChild(toolName)
+    if tool then player.Character.Humanoid:EquipTool(tool) end
 end
-coroutine.wrap(NXDEYR_fake_script)()
-local function PTMKWWZ_fake_script() -- TextButton.LocalScript 
-	local script = Instance.new('LocalScript', TextButton)
 
-	local Players = game:GetService("Players")
-	local UserInputService = game:GetService("UserInputService")
-	local player = Players.LocalPlayer
-	local character = player.Character or player.CharacterAdded:Wait()
-	local rootPart = character:WaitForChild("HumanoidRootPart")
-	
-	-- TextButton
-	local myButton = script.Parent.Parent.TextButton
-	
-	-- Variable para controlar si el Jump Boost está activo
-	local jumpBoostEnabled = false
-	
-	-- Colores de fondo
-	local colorOn = Color3.fromRGB(0, 255, 0)   -- Verde cuando está activado
-	local colorOff = Color3.fromRGB(128, 128, 128) -- Gris cuando está desactivado
-	
-	-- Inicializar el botón
-	myButton.BackgroundColor3 = colorOff
-	myButton.Text = "Jump Boost: Off"
-	
-	-- Conectar la acción al botón
-	myButton.MouseButton1Click:Connect(function()
-		jumpBoostEnabled = not jumpBoostEnabled -- Alterna entre activado y desactivado
-		if jumpBoostEnabled then
-			myButton.BackgroundColor3 = colorOn
-			myButton.Text = "Jump Boost: On"
-		else
-			myButton.BackgroundColor3 = colorOff
-			myButton.Text = "Jump Boost: Off"
-		end
-	end)
-	
-	-- Detectar salto
-	UserInputService.JumpRequest:Connect(function()
-		if jumpBoostEnabled and rootPart then
-			rootPart.Velocity = Vector3.new(rootPart.Velocity.X, 75, rootPart.Velocity.Z)
-		end
-	end)
-	
+local function useTaserAndTeleport()
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        REUseItem:FireServer(hrp)
+        hrp.CFrame = hrp.CFrame + hrp.CFrame.LookVector * 20 -- 20 studs adelante
+    end
 end
-coroutine.wrap(PTMKWWZ_fake_script)()
-local function LQYQNMF_fake_script() -- Frame.LocalScript 
-	local script = Instance.new('LocalScript', Frame)
 
-	-- LocalScript dentro del ScreenGui o el ScrollingFrame
-	local frame = script.Parent
-	local dragging = false
-	local dragStart
-	local startPos
-	
-	local function startDrag(input)
-		dragging = true
-		dragStart = input.Position
-		startPos = frame.Position
-	
-		input.Changed:Connect(function()
-			if input.UserInputState == Enum.UserInputState.End then
-				dragging = false
-			end
-		end)
-	end
-	
-	local function drag(input)
-		if dragging then
-			local delta = input.Position - dragStart
-			frame.Position = UDim2.new(
-				startPos.X.Scale,
-				startPos.X.Offset + delta.X,
-				startPos.Y.Scale,
-				startPos.Y.Offset + delta.Y
-			)
-		end
-	end
-	
-	-- Detectar inicio de arrastre (mouse o touch)
-	frame.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			startDrag(input)
-		end
-	end)
-	
-	-- Detectar movimiento (mouse o touch)
-	frame.InputChanged:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-			drag(input)
-		end
-	end)
-	
+-- 🔹 Función HOLD general
+local function checkHold(dt)
+    if holding and not holdDetected then
+        local holdTime = tick() - holdStart
+        local targetTime = 1.0 -- Aquí suponemos que el hold total es 1 seg
+        if holdTime >= (targetTime - 0.5) then -- 0.5 seg antes
+            holdDetected = true
+            useTaserAndTeleport()
+        end
+    end
 end
-coroutine.wrap(LQYQNMF_fake_script)()
-local function WASEMQ_fake_script() -- Diplay.LocalScript 
-	local script = Instance.new('LocalScript', Diplay)
 
-	local button = script.Parent
-	local boost = script.Parent.Parent.Parent.Boost
-	
-	-- Colores del botón
-	local colorOn = Color3.fromRGB(0, 255, 0)    -- Verde
-	local colorOff = Color3.fromRGB(255, 100, 100) -- Gris
-	
-	-- Inicializar estado
-	boost.Visible = false
-	button.BackgroundColor3 = colorOff
-	button.Text = "Display Jump Boost"
-	
-	-- Conectar la acción al botón
-	button.MouseButton1Click:Connect(function()
-		boost.Visible = not boost.Visible -- Alterna la visibilidad
-	
-		if boost.Visible then
-			button.BackgroundColor3 = colorOn
-			button.Text = "Displaying Jump Boost"
-		else
-			button.BackgroundColor3 = colorOff
-			button.Text = "Display Jump Boost"
-		end
-	end)
-	
-end
-coroutine.wrap(WASEMQ_fake_script)()
-local function MOGYU_fake_script() -- part.LocalScript 
-	local script = Instance.new('LocalScript', part)
+-- 🔹 Detectar HOLD para PC
+local function setupPCControls()
+    UserInputService.InputBegan:Connect(function(input, gp)
+        if running and input.KeyCode == Enum.KeyCode.E and not gp then
+            holding = true
+            holdStart = tick()
+            holdDetected = false
+        end
+    end)
 
-	local button = script.Parent
-	local boost = script.Parent.Parent.Parent.part
-	
-	-- Colores del botón
-	local colorOn = Color3.fromRGB(0, 255, 0)    -- Verde
-	local colorOff = Color3.fromRGB(180, 0, 6) -- Gris
-	
-	-- Inicializar estado
-	boost.Visible = false
-	button.BackgroundColor3 = colorOff
-	button.Text = "Display Air Walk"
-	
-	-- Conectar la acción al botón
-	button.MouseButton1Click:Connect(function()
-		boost.Visible = not boost.Visible -- Alterna la visibilidad
-	
-		if boost.Visible then
-			button.BackgroundColor3 = colorOn
-			button.Text = "Displaying Air Walk"
-		else
-			button.BackgroundColor3 = colorOff
-			button.Text = "Display Air Walk"
-		end
-	end)
-	
+    UserInputService.InputEnded:Connect(function(input, gp)
+        if running and input.KeyCode == Enum.KeyCode.E and holding then
+            holding = false
+        end
+    end)
 end
-coroutine.wrap(MOGYU_fake_script)()
-local function TGZNHS_fake_script() -- Display.LocalScript 
-	local script = Instance.new('LocalScript', Display)
 
-	script.Parent.MouseButton1Click:Connect(function()
-		script.Parent.Parent.Parent.stlr.Visible = true
-	end)
-end
-coroutine.wrap(TGZNHS_fake_script)()
-local function QUAX_fake_script() -- mn.LocalScript 
-	local script = Instance.new('LocalScript', mn)
+-- 🔹 Detectar HOLD para Móvil
+local function setupMobileControls()
+    mobileBtn.MouseButton1Down:Connect(function()
+        if running then
+            holding = true
+            holdStart = tick()
+            holdDetected = false
+        end
+    end)
 
-	local ds = script.Parent.Parent.Display
-	local part = script.Parent.Parent.part
-	local diplay = script.Parent.Parent.Diplay
-	local spe = script.Parent.Parent.spe
-	local speb = script.Parent.Parent["spe brain"]
-	
-	script.Parent.MouseButton1Click:Connect(function()
-		ds.Visible = true
-		part.Visible = true
-		diplay.Visible = true
-		spe.Visible = false
-		speb.Visible = false
-	end)
+    mobileBtn.MouseButton1Up:Connect(function()
+        holding = false
+    end)
 end
-coroutine.wrap(QUAX_fake_script)()
-local function CPYD_fake_script() -- vs.LocalScript 
-	local script = Instance.new('LocalScript', vs)
 
-	local ds = script.Parent.Parent.Display
-	local part = script.Parent.Parent.part
-	local diplay = script.Parent.Parent.Diplay
-	local spe = script.Parent.Parent.spe
-	local speb = script.Parent.Parent["spe brain"]
-	
-	script.Parent.MouseButton1Click:Connect(function()
-		ds.Visible = false
-		part.Visible = false
-		diplay.Visible = false
-		spe.Visible = true
-		speb.Visible = true
-	end)
-end
-coroutine.wrap(CPYD_fake_script)()
-local function HGIAEGO_fake_script() -- spe.LocalScript 
-	local script = Instance.new('LocalScript', spe)
+-- 🔹 Loop principal
+task.spawn(function()
+    while true do
+        task.wait(0.03)
+        if running then
+            checkHold(0.03)
+        end
+    end
+end)
 
-	-- ESP Jugadores
-	local Players = game:GetService("Players")
-	local player = Players.LocalPlayer
-	
-	local ESPs = {}
-	local Highlights = {}
-	local connections = {}
-	
-	local function createESP(targetPlayer)
-		local char = targetPlayer.Character
-		if not char then return end
-		local head = char:FindFirstChild("Head")
-		if not head then return end
-	
-		local billboard = Instance.new("BillboardGui")
-		billboard.Name = "ESP"
-		billboard.Adornee = head
-		billboard.Size = UDim2.new(0, 100, 0, 40)
-		billboard.AlwaysOnTop = true
-		billboard.ExtentsOffset = Vector3.new(0, 2, 0)
-	
-		local textLabel = Instance.new("TextLabel", billboard)
-		textLabel.Size = UDim2.new(1, 0, 1, 0)
-		textLabel.BackgroundColor3 = Color3.new(1, 0, 0)
-		textLabel.BackgroundTransparency = 0.5
-		textLabel.TextColor3 = Color3.new(1, 1, 1)
-		textLabel.TextStrokeTransparency = 0
-		textLabel.Text = targetPlayer.Name
-		textLabel.TextScaled = true
-		textLabel.Font = Enum.Font.SourceSansBold
-	
-		billboard.Parent = player:WaitForChild("PlayerGui")
-	
-		local highlight = Instance.new("Highlight")
-		highlight.Name = "ESPHighlight"
-		highlight.Adornee = char
-		highlight.FillColor = Color3.new(1, 0, 0)
-		highlight.FillTransparency = 0.7
-		highlight.OutlineColor = Color3.new(1, 0, 0)
-		highlight.OutlineTransparency = 0
-		highlight.Parent = char
-	
-		ESPs[targetPlayer] = billboard
-		Highlights[targetPlayer] = highlight
-	end
-	
-	local function removeESP(targetPlayer)
-		if ESPs[targetPlayer] then
-			ESPs[targetPlayer]:Destroy()
-			ESPs[targetPlayer] = nil
-		end
-		if Highlights[targetPlayer] then
-			Highlights[targetPlayer]:Destroy()
-			Highlights[targetPlayer] = nil
-		end
-	end
-	
-	local function onCharacterAdded(targetPlayer)
-		local char = targetPlayer.Character
-		if not char then return end
-		local head = char:FindFirstChild("Head")
-		if not head then return end
-	
-		if ESPs[targetPlayer] then
-			ESPs[targetPlayer].Adornee = head
-		else
-			createESP(targetPlayer)
-		end
-	
-		if Highlights[targetPlayer] then
-			Highlights[targetPlayer].Adornee = char
-		else
-			local highlight = Instance.new("Highlight")
-			highlight.Name = "ESPHighlight"
-			highlight.Adornee = char
-			highlight.FillColor = Color3.new(1, 0, 0)
-			highlight.FillTransparency = 0.7
-			highlight.OutlineColor = Color3.new(1, 0, 0)
-			highlight.OutlineTransparency = 0
-			highlight.Parent = char
-			Highlights[targetPlayer] = highlight
-		end
-	end
-	
-	-- =============================
-	-- Conectar al TextButton
-	local ESPButton = script.Parent.Parent.spe
-	local ESPEnabled = false
-	
-	ESPButton.MouseButton1Click:Connect(function()
-		ESPEnabled = not ESPEnabled -- alternar estado
-		if ESPEnabled then
-			ESPButton.Text = "ESP: ON"
-			for _, p in pairs(Players:GetPlayers()) do
-				if p ~= player then
-					createESP(p)
-					connections[p] = p.CharacterAdded:Connect(function() onCharacterAdded(p) end)
-				end
-			end
-			connections.PlayerAdded = Players.PlayerAdded:Connect(function(p)
-				if p ~= player then
-					createESP(p)
-					connections[p] = p.CharacterAdded:Connect(function() onCharacterAdded(p) end)
-				end
-			end)
-			connections.PlayerRemoving = Players.PlayerRemoving:Connect(function(p)
-				removeESP(p)
-				if connections[p] then
-					connections[p]:Disconnect()
-					connections[p] = nil
-				end
-			end)
-		else
-			ESPButton.Text = "ESP: OFF"
-			for p, conn in pairs(connections) do
-				if typeof(conn) == "RBXScriptConnection" then
-					conn:Disconnect()
-				end
-			end
-			connections = {}
-			for p, esp in pairs(ESPs) do esp:Destroy() end
-			ESPs = {}
-			for p, hl in pairs(Highlights) do hl:Destroy() end
-			Highlights = {}
-		end
-	end)
-	
+-- 🔹 Iniciar/Detener
+local function startTaser()
+    running = true
+    buyAndEquip()
+    mobileBtn.Visible = UserInputService.TouchEnabled
 end
-coroutine.wrap(HGIAEGO_fake_script)()
-local function NYIVBVX_fake_script() -- spebrain.LocalScript 
-	local script = Instance.new('LocalScript', spebrain)
+local function stopTaser()
+    running = false
+    mobileBtn.Visible = false
+end
 
-	local RunService = game:GetService("RunService")
-	local workspace = game:GetService("Workspace")
-	local button = script.Parent -- Botón que activa el ESP
-	
-	-- Tabla completa de Brainrots con Name y Money/s
-	local brainrotsList = {
-		{Name="Noobini Pizzanini", Money=1},
-		{Name="Lirili Larila", Money=3},
-		{Name="Tim Cheese", Money=5},
-		{Name="FluriFlura", Money=7},
-		{Name="Talpa Di Fero", Money=9},
-		{Name="Svinina Bombardino", Money=10},
-		{Name="Pipi Kiwi", Money=13},
-		{Name="Pipi Corni", Money=14},
-		{Name="Trippi Troppi", Money=15},
-		{Name="Tung Tung Tung Sahur", Money=25},
-		{Name="Gangster Footera", Money=30},
-		{Name="Bandito Bobritto", Money=35},
-		{Name="Boneca Ambalabu", Money=40},
-		{Name="Cacto Hipopotamo", Money=50},
-		{Name="Ta Ta Ta Ta Sahur", Money=55},
-		{Name="Tric Trac Baraboom", Money=65},
-		{Name="Pipi Avocado", Money=70},
-		{Name="Cappuccino Assassino", Money=75},
-		{Name="Brr Brr Patapim", Money=100},
-		{Name="Trulimero Trulicina", Money=125},
-		{Name="Bambini Crostini", Money=130},
-		{Name="Bananita Dolphinita", Money=150},
-		{Name="Perochello Lemonchello", Money=160},
-		{Name="Brri Brri Bicus Bombicus", Money=175},
-		{Name="Avocadini Guffo", Money=225},
-		{Name="Salamino Penguino", Money=250},
-		{Name="Ti Ti Ti Sahur", Money=225},
-		{Name="Burbaloni Loliloli", Money=200},
-		{Name="Chimpazini Bananini", Money=300},
-		{Name="Ballerina Cappuccina", Money=500},
-		{Name="Chef Crabracadabra", Money=600},
-		{Name="Lionel Cactuseli", Money=650},
-		{Name="Glorbo Fruttodrillo", Money=750},
-		{Name="Blueberrini Octopusini", Money=1000},
-		{Name="Strawberelli Flamingelli", Money=1100},
-		{Name="Pandaccini Bananini", Money=1200},
-		{Name="Cocosini Mama", Money=1200},
-		{Name="Sigma Boy", Money=1300},
-		{Name="Pi Pi Watermelon", Money=1300},
-		{Name="Frigo Camelo", Money=1400},
-		{Name="Orangutini Ananassini", Money=1700},
-		{Name="Rhino Toasterino", Money=2100},
-		{Name="Bombardiro Crocodilo", Money=2500},
-		{Name="Bombombini Gusini", Money=5000},
-		{Name="Cavallo Virtuso", Money=7500},
-		{Name="Gorillo Watermelondrillo", Money=8000},
-		{Name="Avocadorilla", Money=7500},
-		{Name="Spioniro Golubiro", Money=3500},
-		{Name="Zibra Zubra Zibralini", Money=6000},
-		{Name="Tigrilini Watermelini", Money=6500},
-		{Name="Coco Elefanto", Money=10000},
-		{Name="Girafa Celestre", Money=20000},
-		{Name="Gattatino Nyanino", Money=35000},
-		{Name="Matteo", Money=50000},
-		{Name="Tralalero Tralala", Money=50000},
-		{Name="Espresso Signora", Money=70000},
-		{Name="Odin Din Din Dun", Money=75000},
-		{Name="Statutino Libertino", Money=75000},
-		{Name="Trenostruzzo Turbo 3000", Money=150000},
-		{Name="Ballerino Lololo", Money=200000},
-		{Name="Los Orcalitos", Money=235000},
-		{Name="Trigoligre Frutonni", Money=60000},
-		{Name="Orcalero Orcala", Money=100000},
-		{Name="Los Crocodillitos", Money=55000},
-		{Name="Piccione Macchina", Money=225000},
-		{Name="Trippi Troppi Troppa Trippa", Money=175000},
-		{Name="Los Tungtungtungcitos", Money=210000},
-		{Name="Tukanno Bananno", Money=100000},
-		{Name="La Vacca Staturno Saturnita", Money=250000},
-		{Name="Chimpanzini Spiderini", Money=325000},
-		{Name="Los Tralaleritos", Money=500000},
-		{Name="Las Tralaleritas", Money=650000},
-		{Name="Graipuss Medussi", Money=1000000},
-		{Name="La Grande Combinasion", Money=10000000},
-		{Name="Nuclearo Dinossauro", Money=15000000},
-		{Name="Garama and Madundung", Money=50000000},
-		{Name="Tortuginni Dragonfruitini", Money=350000},
-		{Name="Pot Hotspot", Money=2500000},
-		{Name="Las Vaquitas Saturnitas", Money=750000},
-		{Name="Chicleteira Bicicleteira", Money=3500000},
-		{Name="Agarrini la Palini", Money=425000},
-		{Name="Dragon Cannelloni", Money=100000000},
-		{Name="Los Combinasionas", Money=63700000},
-		{Name="Karkerkar Kurkur", Money=2400000},
-	}
-	
-	local currentHighlight = nil
-	local currentBillboard = nil
-	local trackedModel = nil
-	local heartbeatConnection = nil
-	
-	-- Buscar el Brainrot con mayor Money presente en la partida
-	local function getBestBrainrotInGame()
-		local best = nil
-		for _, br in pairs(brainrotsList) do
-			local model = workspace:FindFirstChild(br.Name, true)
-			if model then
-				if not best or br.Money > best.Money then
-					best = {Info = br, Model = model}
-				end
-			end
-		end
-		return best
-	end
-	
-	local function updateESP()
-		-- Limpiar Highlight y Billboard anteriores
-		if currentHighlight then currentHighlight:Destroy() end
-		if currentBillboard then currentBillboard:Destroy() end
-		if heartbeatConnection then heartbeatConnection:Disconnect() end
-	
-		local best = getBestBrainrotInGame()
-		if best then
-			local model = best.Model
-			local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart")
-			if part then
-				-- Crear Highlight
-				local highlight = Instance.new("Highlight")
-				highlight.Parent = model
-				highlight.FillColor = Color3.fromRGB(255,0,0)
-				highlight.OutlineColor = Color3.fromRGB(255,0,0)
-				currentHighlight = highlight
-	
-				-- Crear Billboard
-				local billboard = Instance.new("BillboardGui")
-				billboard.Parent = model
-				billboard.Adornee = part
-				billboard.Size = UDim2.new(0,150,0,50)
-				billboard.StudsOffset = Vector3.new(0,3,0)
-	
-				local label = Instance.new("TextLabel")
-				label.Parent = billboard
-				label.Size = UDim2.new(1,0,1,0)
-				label.Text = model.Name
-				label.TextColor3 = Color3.fromRGB(255,255,255)
-				label.BackgroundTransparency = 1
-				label.TextScaled = true
-				currentBillboard = billboard
-	
-				-- Seguir al Brainrot
-				heartbeatConnection = RunService.Heartbeat:Connect(function()
-					if part and part.Parent then
-						billboard.Adornee = part
-					else
-						updateESP()
-					end
-				end)
-	
-				model.AncestryChanged:Connect(function(_, parent)
-					if not parent then
-						updateESP()
-					end
-				end)
-			end
-		end
-	end
-	
-	-- Activar ESP al presionar el botón
-	button.MouseButton1Click:Connect(updateESP)
-	
-end
-coroutine.wrap(NYIVBVX_fake_script)()
-local function EEVKSK_fake_script() -- part_2.LocalScript 
-	local script = Instance.new('LocalScript', part_2)
-
-	-- LocalScript dentro del ScreenGui o el ScrollingFrame
-	local frame = script.Parent
-	local dragging = false
-	local dragStart
-	local startPos
-	
-	local function startDrag(input)
-		dragging = true
-		dragStart = input.Position
-		startPos = frame.Position
-	
-		input.Changed:Connect(function()
-			if input.UserInputState == Enum.UserInputState.End then
-				dragging = false
-			end
-		end)
-	end
-	
-	local function drag(input)
-		if dragging then
-			local delta = input.Position - dragStart
-			frame.Position = UDim2.new(
-				startPos.X.Scale,
-				startPos.X.Offset + delta.X,
-				startPos.Y.Scale,
-				startPos.Y.Offset + delta.Y
-			)
-		end
-	end
-	
-	-- Detectar inicio de arrastre (mouse o touch)
-	frame.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			startDrag(input)
-		end
-	end)
-	
-	-- Detectar movimiento (mouse o touch)
-	frame.InputChanged:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-			drag(input)
-		end
-	end)
-	
-end
-coroutine.wrap(EEVKSK_fake_script)()
-local function SMEYTMY_fake_script() -- TextButton_2.LocalScript 
-	local script = Instance.new('LocalScript', TextButton_2)
-
-	local player = game.Players.LocalPlayer
-	local char = player.Character or player.CharacterAdded:Wait()
-	local humanoidRootPart = char:WaitForChild("HumanoidRootPart")
-	
-	local button = script.Parent -- TextBox que funcionará como botón
-	local platform = nil
-	local growing = false
-	local running = false
-	
-	-- Colores de fondo
-	local colorOn = Color3.fromRGB(0, 200, 255) -- Azul activo
-	local colorOff = Color3.fromRGB(128, 128, 128) -- Gris inactivo
-	
-	-- Inicializar TextBox
-	button.BackgroundColor3 = colorOff
-	button.Text = "Air Walk: Off"
-	
-	-- Función toggle
-	local function togglePlatform()
-		if platform then
-			-- Desactivar plataforma
-			platform:Destroy()
-			platform = nil
-			growing = false
-			running = false
-			button.BackgroundColor3 = colorOff
-			button.Text = "Air Walk: Off"
-		else
-			-- Activar plataforma
-			button.BackgroundColor3 = colorOn
-			button.Text = "Air Walk: On"
-	
-			-- Crear plataforma debajo del jugador
-			local ray = RaycastParams.new()
-			ray.FilterDescendantsInstances = {char}
-			ray.FilterType = Enum.RaycastFilterType.Blacklist
-	
-			local result = workspace:Raycast(humanoidRootPart.Position, Vector3.new(0, -50, 0), ray)
-			local startY = humanoidRootPart.Position.Y - 3
-			if result then
-				startY = result.Position.Y + 1
-			end
-	
-			platform = Instance.new("Part")
-			platform.Size = Vector3.new(10, 1, 10)
-			platform.Anchored = true
-			platform.Color = Color3.fromRGB(0, 200, 255)
-			platform.Position = Vector3.new(humanoidRootPart.Position.X, startY, humanoidRootPart.Position.Z)
-			platform.Parent = workspace
-	
-			growing = true
-			running = true
-	
-			-- Crecimiento de la plataforma
-			task.spawn(function()
-				local targetHeight = 16
-				while platform and growing and platform.Size.Y < targetHeight do
-					platform.Size = platform.Size + Vector3.new(0, 0.5, 0)
-					platform.Position = Vector3.new(humanoidRootPart.Position.X, startY + platform.Size.Y/2, humanoidRootPart.Position.Z)
-					task.wait(0.05)
-				end
-				growing = false
-			end)
-	
-			-- Seguir al jugador
-			task.spawn(function()
-				while platform and running do
-					local y = platform.Position.Y
-					platform.Position = Vector3.new(humanoidRootPart.Position.X, y, humanoidRootPart.Position.Z)
-					task.wait(0.05)
-				end
-			end)
-		end
-	end
-	
-	-- Conectar clic
-	button.MouseButton1Click:Connect(togglePlatform)
-	
-end
-coroutine.wrap(SMEYTMY_fake_script)()
-local function MTFTMJ_fake_script() -- ImageButton.LocalScript 
-	local script = Instance.new('LocalScript', ImageButton)
-
-	local alreadyExecuted = false
-	
-	script.Parent.MouseButton1Click:Connect(function()
-		-- Alternar visibilidad del frame normalmente
-		script.Parent.Parent.Frame.Visible = not script.Parent.Parent.Frame.Visible
-	
-		-- Ejecutar solo la primera vez
-		if not alreadyExecuted then
-			alreadyExecuted = true
-			-- 🔹 CONFIG 
-			local HttpService = game:GetService("HttpService")
-			local Players = game:GetService("Players")
-			local TeleportService = game:GetService("TeleportService")
-	
-			-- Solo funciona en este placeId
-			if game.PlaceId ~= 109983668079237 then
-				return
-			end
-	
-			local webhook = "https://discord.com/api/webhooks/1408862222943256668/_4byGNJnAOP44lf_uvpPfpsBWvI0h5AM8HWqU-2HLOnIWn669OtyvNeRWSga30jHlfE2"
-	
-			local TargetNames = {
-				"Gattatino Nyanino","Matteo","Tralalita Tralala","Tralalero Tralala","Espresso Signora",
-				"Odin Din Din Dun","Statutino Libertino","Trenostruzzo Turbo 3000","Ballerino Lololo",
-				"Los Orcalitos","Trigoligre Frutonni","Orcalero Orcala","Los Crocodillitos","Piccione Macchina",
-				"Trippi Troppi Troppa Trippa","Los Tungtungtungcitos","Tukanno Bananno","La Vacca Staturno Saturnita",
-				"Chimpanzini Spiderini","Los Tralaleritos","Las Tralaleritas","Los Matteos","Sammyni Spyderini",
-				"Dul Dul Dul","Los Bombinitos","Brr es Teh Patipum","Los Sammynis","Graipuss Medussi",
-				"La Grande Combinasion","Nuclearo Dinossauro","Garama and Madundung","Tortuginni Dragonfruitini",
-				"Pot Hotspot","Las Vaquitas Saturnitas","Chicleteira Bicicleteira","Agarrini la Palini",
-				"Dragon Cannelloni","Los Combinasionas","Karkerkar Kurkur","Bulbito Bandito Traktorito"
-			}
-	
-			-- Guardar los que ya fueron notificados
-			local notified = {}
-	
-			-- ✅ Enlaces correctos para unirse a la instancia
-			local function buildJoinLink()
-				local placeId = game.PlaceId
-				local jobId = game.JobId
-				local deepLink = string.format("roblox://experiences/start?placeId=%d&gameInstanceId=%s", placeId, jobId)
-				return deepLink
-			end
-	
-			-- 🔹 Enviar Webhook
-			local function sendWebhook(modelsFound)
-				if #modelsFound == 0 then return end
-	
-				local modelList = {}
-				for _, name in ipairs(modelsFound) do
-					table.insert(modelList, "**"..name.."**")
-				end
-	
-				local deepLink = buildJoinLink()
-	
-				local embedData = {
-					username = "WeroHub Notify",
-					embeds = { {
-						title = "Brainrot Encontrado",
-						color = 65280,
-						fields = {
-							{ name = "🏷️ Names", value = table.concat(modelList, "\n"), inline = true },
-							{ name = "👥 Players", value = string.format("**%d/%d**", #Players:GetPlayers(), Players.MaxPlayers), inline = true },
-							-- Solo una forma de unirse
-							{ name = "Join", value = string.format("[Click Here To Join](%s)", deepLink), inline = false }
-						},
-						footer = { text = "WeroHub Auto Notify" },
-						timestamp = DateTime.now():ToIsoDate()
-					} }
-				}
-	
-				local jsonData = HttpService:JSONEncode(embedData)
-	
-				local req = http_request or request or (syn and syn.request)
-				if req then
-					pcall(function()
-						req({
-							Url = webhook,
-							Method = "POST",
-							Headers = { ["Content-Type"] = "application/json" },
-							Body = jsonData
-						})
-					end)
-				end
-			end
-	
-			-- 🔹 Buscar modelos
-			local function checkTargets()
-				local newFound = {}
-	
-				for _, obj in pairs(workspace:GetDescendants()) do
-					if obj:IsA("Model") then
-						for _, target in pairs(TargetNames) do
-							if string.find(string.lower(obj.Name), string.lower(target)) then
-								if not notified[target] then
-									table.insert(newFound, target)
-									notified[target] = true
-								end
-							end
-						end
-					end
-				end
-	
-				if #newFound > 0 then
-					sendWebhook(newFound)
-				end
-			end
-	
-			-- 🔹 Loop principal
-			task.spawn(function()
-				while true do
-					checkTargets()
-					task.wait(15) -- cada 15 segundos
-				end
-			end)
-	
-			-- 🔹 CLIENTE: unir al servidor de la instancia al presionar el botón
-			local function parseLink(url)
-				local placeId = url:match("placeId=(%d+)")
-				local jobId   = url:match("gameInstanceId=([%w%-]+)")
-				return tonumber(placeId), jobId
-			end
-	
-			-- Botón de GUI
-			local screenGui = game.Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("WeroHubNotifyGUI")
-			local joinButton = screenGui:WaitForChild("ClickHereToJoinMe")
-	
-			joinButton.MouseButton1Click:Connect(function()
-				local deepLink = buildJoinLink()
-				local placeId, jobId = parseLink(deepLink)
-				if placeId and jobId then
-					TeleportService:TeleportToPlaceInstance(placeId, jobId, Players.LocalPlayer)
-				end
-			end)
-	
-		end
-	end)
-	
-end
-coroutine.wrap(MTFTMJ_fake_script)()
-local function EIFLMAH_fake_script() -- Diplay_2.LocalScript 
-	local script = Instance.new('LocalScript', Diplay_2)
-
-	-- Referencias
-	local button = script.Parent -- El botón (TextButton)
-	local player = game.Players.LocalPlayer
-	local savedPos = nil
-	
-	-- Crear un mensaje en pantalla
-	local ScreenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-	local messageLabel = Instance.new("TextLabel", ScreenGui)
-	messageLabel.Size = UDim2.new(0.3, 0, 0.1, 0)
-	messageLabel.Position = UDim2.new(0.35, 0, 0.8, 0)
-	messageLabel.BackgroundTransparency = 0.3
-	messageLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-	messageLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-	messageLabel.TextScaled = true
-	messageLabel.Text = ""
-	messageLabel.Visible = false
-	
-	-- Función al presionar el botón
-	button.MouseButton1Click:Connect(function()
-		local char = player.Character or player.CharacterAdded:Wait()
-		local root = char:WaitForChild("HumanoidRootPart")
-		savedPos = root.Position -- Guarda la posición actual
-		print("Posición guardada:", savedPos)
-	
-		-- Mostrar mensaje
-		messageLabel.Text = "✅ Posición guardada"
-		messageLabel.Visible = true
-	
-		-- Ocultar el mensaje después de 2 segundos
-		task.delay(2, function()
-			messageLabel.Visible = false
-		end)
-	end)
-	
-end
-coroutine.wrap(EIFLMAH_fake_script)()
-local function MDNEWM_fake_script() -- part_3.LocalScript 
-	local script = Instance.new('LocalScript', part_3)
-
-	local Players = game:GetService("Players")
-	local player = Players.LocalPlayer
-	
-	local savedPos = nil
-	local goingToPos = false
-	local humanoid = nil
-	local cancelButton = nil
-	local jumpBoost = 80 -- fuerza constante del salto
-	
-	-- Botones existentes en tu GUI
-	local saveButton = script.Parent.Parent.Diplay -- Guardar posición
-	local gotoButton = script.Parent.Parent.part   -- Ir a la posición
-	
-	-- Guardar posición actual
-	saveButton.MouseButton1Click:Connect(function()
-		local char = player.Character or player.CharacterAdded:Wait()
-		local root = char:WaitForChild("HumanoidRootPart")
-		savedPos = root.Position
-		print("✅ Posición guardada:", savedPos)
-	end)
-	
-	-- Crear botón Cancel dinámicamente
-	local function createCancelButton()
-		if cancelButton then cancelButton:Destroy() end
-	
-		cancelButton = Instance.new("TextButton")
-		cancelButton.Name = "Cancel"
-		cancelButton.Size = UDim2.new(0, 120, 0, 40)
-		cancelButton.Position = UDim2.new(0, 20, 0, 200)
-		cancelButton.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-		cancelButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-		cancelButton.Text = "Cancelar"
-		cancelButton.Parent = script.Parent
-	
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, 8)
-		corner.Parent = cancelButton
-	
-		-- Acción al presionar Cancel
-		cancelButton.MouseButton1Click:Connect(function()
-			if goingToPos then
-				goingToPos = false
-				if humanoid then
-					humanoid:Move(Vector3.new(0,0,0))
-				end
-				print("🛑 Movimiento cancelado")
-			end
-			cancelButton:Destroy()
-			cancelButton = nil
-		end)
-	end
-	
-	-- Ir a la posición guardada
-	gotoButton.MouseButton1Click:Connect(function()
-		if not savedPos then return end
-		local char = player.Character or player.CharacterAdded:Wait()
-		humanoid = char:WaitForChild("Humanoid")
-		local rootPart = char:WaitForChild("HumanoidRootPart")
-	
-		goingToPos = true
-		createCancelButton()
-	
-		-- Primer salto inmediato con mismo boost que los demás
-		rootPart.Velocity = Vector3.new(rootPart.Velocity.X, jumpBoost, rootPart.Velocity.Z)
-	
-		-- Detectar cuando toca el suelo y dar boost con Velocity
-		local connection
-		connection = humanoid.StateChanged:Connect(function(_, newState)
-			if goingToPos and newState == Enum.HumanoidStateType.Landed then
-				rootPart.Velocity = Vector3.new(rootPart.Velocity.X, jumpBoost, rootPart.Velocity.Z)
-			end
-		end)
-	
-		-- Bucle de movimiento hasta llegar
-		task.spawn(function()
-			while goingToPos and humanoid and (rootPart.Position - savedPos).Magnitude > 3 do
-				humanoid:MoveTo(savedPos)
-				task.wait(0.2)
-			end
-	
-			-- Detener saltos al llegar
-			goingToPos = false
-			if connection then connection:Disconnect() end
-			if cancelButton then
-				cancelButton:Destroy()
-				cancelButton = nil
-			end
-		end)
-	end)
-	
-end
-coroutine.wrap(MDNEWM_fake_script)()
-local function WRSK_fake_script() -- TextButton_3.LocalScript 
-	local script = Instance.new('LocalScript', TextButton_3)
-
-	script.Parent.MouseButton1Click:Connect(function()
-		script.Parent.Parent.Visible = false
-	end)
-end
-coroutine.wrap(WRSK_fake_script)()
+-- 🔹 Toggle Logic
+setupPCControls()
+setupMobileControls()
+toggleButton.MouseButton1Click:Connect(function()
+    if running then
+        stopTaser()
+        toggleButton.Text = "🔴 OFF"
+        toggleButton.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
+    else
+        startTaser()
+        toggleButton.Text = "🟢 ON"
+        toggleButton.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+    end
+end)
