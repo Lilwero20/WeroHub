@@ -1,262 +1,160 @@
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+-- 🔹 Script Local (StarterGui o StarterPlayerScripts)
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer
 
-local Window = Rayfield:CreateWindow({
-    Name = "WeroHub",
-    Icon = 89001596756285, -- Icon in Topbar. Can use Lucide Icons (string) or Roblox Image (number). 0 to use no icon (default).
-    LoadingTitle = "Loading WeroHub",
-    LoadingSubtitle = "by Wero",
-    Theme = "Default", -- Check https://docs.sirius.menu/rayfield/configuration/themes
- 
-    DisableRayfieldPrompts = false,
-    DisableBuildWarnings = false, -- Prevents Rayfield from warning when the script has a version mismatch with the interface
- 
-    ConfigurationSaving = {
-       Enabled = true,
-       FolderName = nil, -- Create a custom folder for your hub/game
-       FileName = "Big Hub"
-    },
- 
-    Discord = {
-       Enabled = false, -- Prompt the user to join your Discord server if their executor supports it
-       Invite = "noinvitelink", -- The Discord invite code, do not include discord.gg/. E.g. discord.gg/ ABCD would be ABCD
-       RememberJoins = true -- Set this to false to make them join the discord every time they load it up
-    },
- 
-    KeySystem = false, -- Set this to true to use our key system
-    KeySettings = {
-       Title = "Untitled",
-       Subtitle = "Key System",
-       Note = "No method of obtaining the key is provided", -- Use this to tell the user how to get a key
-       FileName = "Key", -- It is recommended to use something unique as other scripts using Rayfield may overwrite your key file
-       SaveKey = true, -- The user's key will be saved, but if you change the key, they will be unable to use your script
-       GrabKeyFromSite = false, -- If this is true, set Key below to the RAW site you would like Rayfield to get the key from
-       Key = {"Hello"} -- List of keys that will be accepted by the system, can be RAW file links (pastebin, github etc) or simple strings ("hello","key22")
-    }
- })
+-- 🔹 Remotes
+local RFCoinsShopServiceRequestBuy = ReplicatedStorage.Packages.Net["RF/CoinsShopService/RequestBuy"] -- RemoteFunction
+local REUseItem = ReplicatedStorage.Packages.Net["RE/UseItem"]
 
- local TeleportTab = Window:CreateTab("Teleport", 4483362458) -- Title, Image
+-- 🔹 Variables
+local running = false
+local toolName = "Taser Gun"
+local holding = false
+local holdStart = 0
 
-local Input = TeleportTab:CreateInput({
-    Name = "TP to Player",
-    CurrentValue = "",
-    PlaceholderText = "Input Placeholder",
-    RemoveTextAfterFocusLost = false,
-    Flag = "Input1",
-    Callback = function(Text)
-        local Players = game:GetService("Players")
-        local TweenService = game:GetService("TweenService")
-        
-        local targetPlayerName = Text
-        local localPlayer = Players.LocalPlayer
-        
-        local function flyToPlayer(targetPlayerName)
-            local targetPlayer = Players:FindFirstChild(targetPlayerName)
-            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                local targetPosition = targetPlayer.Character.HumanoidRootPart.Position
-                local character = localPlayer.Character
-                if character and character:FindFirstChild("HumanoidRootPart") then
-                    local humanoidRootPart = character.HumanoidRootPart
+-- =================================
+-- 🔹 GUI Toggle
+-- =================================
+local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+screenGui.Name = "TaserToggleGUI"
 
-                    -- Subir 10 studs primero
-                    humanoidRootPart.CFrame = humanoidRootPart.CFrame * CFrame.new(0, 10, 0)
+local frame = Instance.new("Frame", screenGui)
+frame.Size = UDim2.new(0, 150, 0, 50)
+frame.Position = UDim2.new(0.05, 0, 0.3, 0)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+frame.BackgroundTransparency = 0.2
+frame.ZIndex = 10
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
 
-                    -- Volar hacia arriba del jugador (unos 10 studs arriba)
-                    local aboveTargetPosition = targetPosition + Vector3.new(0, 10, 0)
+local toggleButton = Instance.new("TextButton", frame)
+toggleButton.Size = UDim2.new(1, -10, 1, -10)
+toggleButton.Position = UDim2.new(0, 5, 0, 5)
+toggleButton.Text = "🔴 OFF"
+toggleButton.Font = Enum.Font.GothamBold
+toggleButton.TextSize = 20
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
+toggleButton.AutoButtonColor = true
+Instance.new("UICorner", toggleButton).CornerRadius = UDim.new(0, 10)
 
-                    local distance = (aboveTargetPosition - humanoidRootPart.Position).Magnitude
-                    local speed = 250
-                    local tweenInfo = TweenInfo.new(distance / speed, Enum.EasingStyle.Linear)
-                    local flyTween = TweenService:Create(humanoidRootPart, tweenInfo, {CFrame = CFrame.new(aboveTargetPosition)})
-                    flyTween:Play()
+-- 🔹 Botón para móviles (oculto hasta ON)
+local mobileBtn = Instance.new("TextButton", screenGui)
+mobileBtn.Size = UDim2.new(0, 80, 0, 80)
+mobileBtn.Position = UDim2.new(0.85, 0, 0.75, 0)
+mobileBtn.Text = "E"
+mobileBtn.Font = Enum.Font.GothamBold
+mobileBtn.TextSize = 26
+mobileBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+mobileBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 100)
+mobileBtn.Visible = false
+Instance.new("UICorner", mobileBtn).CornerRadius = UDim.new(1, 0)
 
-                    flyTween.Completed:Connect(function()
-                        -- Cuando llegue arriba, bajamos sobre el jugador
-                        local descendTweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.In)
-                        local descendTween = TweenService:Create(humanoidRootPart, descendTweenInfo, {CFrame = CFrame.new(targetPosition)})
-                        descendTween:Play()
-                    end)
-                end
-            end
+-- =================================
+-- 🔹 Funciones
+-- =================================
+
+local function buyAndEquip()
+    local success, result = pcall(function()
+        return RFCoinsShopServiceRequestBuy:InvokeServer(toolName)
+    end)
+    if not success then
+        warn("Error al comprar:", result)
+    end
+
+    task.wait(0.5)
+    local tool = player.Backpack:FindFirstChild(toolName)
+    if tool then
+        player.Character.Humanoid:EquipTool(tool)
+    end
+end
+
+local function useTaserAndTeleport()
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+
+    if hrp then
+        REUseItem:FireServer(hrp)
+
+        -- TP 10 studs a la izquierda
+        local leftVector = -hrp.CFrame.RightVector * 10
+        hrp.CFrame = hrp.CFrame + leftVector
+    end
+end
+
+-- 🔹 Detectar HOLD para PC (E)
+local function setupPCControls()
+    UserInputService.InputBegan:Connect(function(input, gp)
+        if running and input.KeyCode == Enum.KeyCode.E and not gp then
+            holding = true
+            holdStart = tick()
         end
-        
-        flyToPlayer(targetPlayerName)
-    end,
-})
+    end)
 
-
-
- local Toggle = TeleportTab:CreateToggle({
-    Name = "Tp to Fruit",
-    CurrentValue = false,
-    Flag = "Toggle1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
-    Callback = function(Value)
-        local Players = game:GetService("Players")
-        local TweenService = game:GetService("TweenService")
-        local Workspace = game:GetService("Workspace")
-
-        local localPlayer = Players.LocalPlayer
-
-        local function flyToFruit()
-            local closestFruit
-            local closestDistance = math.huge
-
-            for _, fruit in pairs(Workspace:GetChildren()) do
-            if fruit:IsA("Tool") and fruit:FindFirstChild("Handle") then
-                local distance = (fruit.Handle.Position - localPlayer.Character.HumanoidRootPart.Position).Magnitude
-                if distance < closestDistance then
-                closestDistance = distance
-                closestFruit = fruit
-                end
+    UserInputService.InputEnded:Connect(function(input, gp)
+        if running and input.KeyCode == Enum.KeyCode.E and holding then
+            holding = false
+            local holdDuration = tick() - holdStart
+            if holdDuration > 0.1 then
+                task.wait(math.max(holdDuration - 0.1, 0))
             end
-            end
-
-            if closestFruit then
-            local targetPosition = closestFruit.Handle.Position
-            local character = localPlayer.Character
-            if character and character:FindFirstChild("HumanoidRootPart") then
-                local humanoidRootPart = character.HumanoidRootPart
-                local distance = (targetPosition - humanoidRootPart.Position).Magnitude
-                local speed = 250
-                local tweenInfo = TweenInfo.new(distance / speed, Enum.EasingStyle.Linear)
-                local tween = TweenService:Create(humanoidRootPart, tweenInfo, {CFrame = CFrame.new(targetPosition)})
-                tween:Play()
-            end
-            end
+            useTaserAndTeleport()
         end
+    end)
+end
 
-        if Value then
-            flyToFruit()
+-- 🔹 Detectar HOLD para Móvil (Botón en pantalla)
+local function setupMobileControls()
+    local touchStart
+    mobileBtn.MouseButton1Down:Connect(function()
+        if running then
+            holding = true
+            holdStart = tick()
         end
-    end,
- })
+    end)
 
- 
- local PlayerTab = Window:CreateTab("Player", 4483362458) -- Title, Image
-
- local Toggle = PlayerTab:CreateToggle({
-    Name = "Inf Energy",
-    CurrentValue = false,
-    Flag = "Toggle1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
-    Callback = function(Value)
-        local Players = game:GetService("Players")
-        local localPlayer = Players.LocalPlayer
-        local energyConnection
-
-        if Value then
-            energyConnection = localPlayer.Character.Energy.Changed:Connect(function()
-            localPlayer.Character.Energy.Value = localPlayer.Character.Energy.MaxValue
-            end)
-        else
-            if energyConnection then
-            energyConnection:Disconnect()
-            energyConnection = nil
+    mobileBtn.MouseButton1Up:Connect(function()
+        if running and holding then
+            holding = false
+            local holdDuration = tick() - holdStart
+            if holdDuration > 0.1 then
+                task.wait(math.max(holdDuration - 0.1, 0))
             end
+            useTaserAndTeleport()
         end
-    end,
- })
-local Toggle = PlayerTab:CreateToggle({
-    Name = "Inf Health",
-    CurrentValue = false,
-    Flag = "Toggle2", -- Ensure this flag is unique
-    Callback = function(Value)
-        local Players = game:GetService("Players")
-        local localPlayer = Players.LocalPlayer
-        local healthConnection
+    end)
+end
 
-        if Value then
-            healthConnection = localPlayer.Character.Humanoid.HealthChanged:Connect(function()
-                localPlayer.Character.Humanoid.Health = localPlayer.Character.Humanoid.MaxHealth
-            end)
-        else
-            if healthConnection then
-                healthConnection:Disconnect()
-                healthConnection = nil
-            end
-        end
-    end,
-})
+-- 🔹 Iniciar/Detener
+local function startTaser()
+    running = true
+    buyAndEquip()
+    mobileBtn.Visible = true -- botón para móviles
+end
 
-local Toggle = PlayerTab:CreateToggle({
-    Name = "Auto Farm",
-    CurrentValue = false,
-    Flag = "Toggle3", -- Ensure this flag is unique
-    Callback = function(Value)
-        local Players = game:GetService("Players")
-        local TweenService = game:GetService("TweenService")
-        local Workspace = game:GetService("Workspace")
-        local localPlayer = Players.LocalPlayer
-        local autoFarmConnection
+local function stopTaser()
+    running = false
+    mobileBtn.Visible = false
+end
 
-        local function autoFarm()
-            while Value do
-                local closestEnemy
-                local closestDistance = math.huge
+-- =================================
+-- 🔹 Toggle Logic
+-- =================================
+setupPCControls()
+setupMobileControls()
 
-                for _, enemy in pairs(Workspace.Enemies:GetChildren()) do
-                    if enemy:FindFirstChild("HumanoidRootPart") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
-                        local distance = (enemy.HumanoidRootPart.Position - localPlayer.Character.HumanoidRootPart.Position).Magnitude
-                        if distance < closestDistance then
-                            closestDistance = distance
-                            closestEnemy = enemy
-                        end
-                    end
-                end
-
-                if closestEnemy then
-                    local targetPosition = closestEnemy.HumanoidRootPart.Position
-                    local character = localPlayer.Character
-                    if character and character:FindFirstChild("HumanoidRootPart") then
-                        local humanoidRootPart = character.HumanoidRootPart
-                        local distance = (targetPosition - humanoidRootPart.Position).Magnitude
-                        local speed = 250
-                        humanoidRootPart.CFrame = CFrame.new(targetPosition + Vector3.new(0, 10, 0)) -- Fly above the enemy
-                        localPlayer.Character:FindFirstChildOfClass("Tool").Handle.Size = Vector3.new(10, 10, 10) -- Increase hitbox size
-                        local tweenInfo = TweenInfo.new(distance / speed, Enum.EasingStyle.Linear)
-                        local tween = TweenService:Create(humanoidRootPart, tweenInfo, {CFrame = CFrame.new(targetPosition)})
-                        tween:Play()
-                        while tween.PlaybackState == Enum.PlaybackState.Playing do
-                            localPlayer.Character:FindFirstChildOfClass("Tool"):Activate()
-                            wait(0.1)
-                        end
-                        tween.Completed:Wait()
-                        -- Attack the enemy
-                        localPlayer.Character:FindFirstChildOfClass("Tool"):Activate()
-                    end
-                end
-                wait(1) -- Adjust the wait time as needed
-            end
-        end
-
-        if Value then
-            autoFarmConnection = game:GetService("RunService").Heartbeat:Connect(autoFarm)
-        else
-            if autoFarmConnection then
-                autoFarmConnection:Disconnect()
-                autoFarmConnection = nil
-            end
-        end
-    end,
-})
-
-local ScriptsTab = Window:CreateTab("Scripts", 4483362458) -- Title, Image
-
-local Button = ScriptsTab:CreateButton({
-    Name = "Infinity yield",
-    Callback = function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
-    end,
- })
-
- local Button = ScriptsTab:CreateButton({
-    Name = "Dex",
-    Callback = function()
-        loadstring(game:HttpGet("https://pastebin.com/raw/FeMbE4xS"))()
-    end,
- })
-
- local Button = ScriptsTab:CreateButton({
-    Name = "Auto Collect orbs",
-    Callback = function()
-        
-    end,
- })
+toggleButton.MouseButton1Click:Connect(function()
+    if running then
+        stopTaser()
+        toggleButton.Text = "🔴 OFF"
+        toggleButton.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
+    else
+        startTaser()
+        toggleButton.Text = "🟢 ON"
+        toggleButton.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+    end
+end)
