@@ -13,6 +13,7 @@ local running = false
 local toolName = "Taser Gun"
 local holding = false
 local holdStart = 0
+local holdDetected = false
 
 -- =================================
 -- 🔹 GUI Toggle
@@ -40,7 +41,7 @@ toggleButton.TextSize = 20
 toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 toggleButton.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
 toggleButton.AutoButtonColor = true
-toggleButton.Active = true -- ✅ el botón sí recibe taps/clicks
+toggleButton.Active = true
 Instance.new("UICorner", toggleButton).CornerRadius = UDim.new(0, 10)
 
 -- 🔹 Botón para móviles (oculto hasta ON)
@@ -56,11 +57,10 @@ mobileBtn.Visible = false
 Instance.new("UICorner", mobileBtn).CornerRadius = UDim.new(1, 0)
 
 -- =================================
--- 🔹 Hacer que el Frame sea draggable sin bloquear botones
+-- 🔹 Hacer que el Frame sea draggable
 -- =================================
 local dragging = false
 local dragStart, startPos
-
 frame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
@@ -68,14 +68,12 @@ frame.InputBegan:Connect(function(input)
         startPos = frame.Position
     end
 end)
-
 frame.InputChanged:Connect(function(input)
     if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         local delta = input.Position - dragStart
         frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
-
 UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = false
@@ -89,26 +87,31 @@ local function buyAndEquip()
     local success, result = pcall(function()
         return RFCoinsShopServiceRequestBuy:InvokeServer(toolName)
     end)
-    if not success then
-        warn("Error al comprar:", result)
-    end
+    if not success then warn("Error al comprar:", result) end
 
     task.wait(0.5)
     local tool = player.Backpack:FindFirstChild(toolName)
-    if tool then
-        player.Character.Humanoid:EquipTool(tool)
-    end
+    if tool then player.Character.Humanoid:EquipTool(tool) end
 end
 
 local function useTaserAndTeleport()
     local char = player.Character or player.CharacterAdded:Wait()
     local hrp = char:FindFirstChild("HumanoidRootPart")
-
     if hrp then
         REUseItem:FireServer(hrp)
-        -- TP 10 studs a la izquierda
-        local leftVector = -hrp.CFrame.RightVector * 10
-        hrp.CFrame = hrp.CFrame + leftVector
+        hrp.CFrame = hrp.CFrame + hrp.CFrame.LookVector * 20 -- 20 studs adelante
+    end
+end
+
+-- 🔹 Función HOLD general
+local function checkHold(dt)
+    if holding and not holdDetected then
+        local holdTime = tick() - holdStart
+        local targetTime = 1.0 -- Aquí suponemos que el hold total es 1 seg
+        if holdTime >= (targetTime - 0.5) then -- 0.5 seg antes
+            holdDetected = true
+            useTaserAndTeleport()
+        end
     end
 end
 
@@ -118,17 +121,13 @@ local function setupPCControls()
         if running and input.KeyCode == Enum.KeyCode.E and not gp then
             holding = true
             holdStart = tick()
+            holdDetected = false
         end
     end)
 
     UserInputService.InputEnded:Connect(function(input, gp)
         if running and input.KeyCode == Enum.KeyCode.E and holding then
             holding = false
-            local holdDuration = tick() - holdStart
-            if holdDuration > 0.1 then
-                task.wait(math.max(holdDuration - 0.1, 0))
-            end
-            useTaserAndTeleport()
         end
     end)
 end
@@ -139,20 +138,24 @@ local function setupMobileControls()
         if running then
             holding = true
             holdStart = tick()
+            holdDetected = false
         end
     end)
 
     mobileBtn.MouseButton1Up:Connect(function()
-        if running and holding then
-            holding = false
-            local holdDuration = tick() - holdStart
-            if holdDuration > 0.1 then
-                task.wait(math.max(holdDuration - 0.1, 0))
-            end
-            useTaserAndTeleport()
-        end
+        holding = false
     end)
 end
+
+-- 🔹 Loop principal
+task.spawn(function()
+    while true do
+        task.wait(0.03)
+        if running then
+            checkHold(0.03)
+        end
+    end
+end)
 
 -- 🔹 Iniciar/Detener
 local function startTaser()
@@ -160,18 +163,14 @@ local function startTaser()
     buyAndEquip()
     mobileBtn.Visible = UserInputService.TouchEnabled
 end
-
 local function stopTaser()
     running = false
     mobileBtn.Visible = false
 end
 
--- =================================
 -- 🔹 Toggle Logic
--- =================================
 setupPCControls()
 setupMobileControls()
-
 toggleButton.MouseButton1Click:Connect(function()
     if running then
         stopTaser()
