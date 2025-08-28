@@ -1,7 +1,7 @@
 -- 🔹 Script Local (StarterGui o StarterPlayerScripts)
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 -- 🔹 Remotes
@@ -11,10 +11,7 @@ local REUseItem = ReplicatedStorage.Packages.Net["RE/UseItem"]
 -- 🔹 Variables
 local running = false
 local toolName = "Taser Gun"
-local holding = false
-local holdStart = 0
-local holdDetected = false
-local targetPrompt = nil -- ProximityPrompt objetivo
+local holdDetected = {}
 
 -- =================================
 -- 🔹 GUI Toggle
@@ -46,34 +43,6 @@ toggleButton.Active = true
 Instance.new("UICorner", toggleButton).CornerRadius = UDim.new(0, 10)
 
 -- =================================
--- 🔹 Hacer que el Frame sea draggable
--- =================================
-local dragging = false
-local dragStart, startPos
-local UserInputService = game:GetService("UserInputService")
-
-frame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = frame.Position
-    end
-end)
-
-frame.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - dragStart
-        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = false
-    end
-end)
-
--- =================================
 -- 🔹 Funciones
 -- =================================
 local function buyAndEquip()
@@ -96,31 +65,34 @@ local function useTaserAndTeleport()
     end
 end
 
--- 🔹 Detectar ProximityPrompt
-local function detectPrompt()
-    -- Buscar todos los prompts en el workspace
+-- 🔹 Detectar todos los ProximityPrompts de Steal
+local function getStealPrompts()
+    local prompts = {}
     for _, obj in pairs(workspace:GetDescendants()) do
-        if obj:IsA("ProximityPrompt") then
-            targetPrompt = obj
-            break
+        if obj:IsA("ProximityPrompt") and obj.ActionText == "Steal" then
+            table.insert(prompts, obj)
         end
     end
+    return prompts
 end
 
--- 🔹 Loop para detectar hold automáticamente
-local function checkPromptHold(dt)
-    if targetPrompt then
+-- 🔹 Loop principal para detectar hold del jugador
+local function checkPrompts(dt)
+    local prompts = getStealPrompts()
+    for _, prompt in pairs(prompts) do
         local playerChar = player.Character
         if not playerChar then return end
         local hrp = playerChar:FindFirstChild("HumanoidRootPart")
         if not hrp then return end
 
-        local distance = (targetPrompt.Parent.Position - hrp.Position).Magnitude
-        if distance <= targetPrompt.MaxActivationDistance then
-            local progress = targetPrompt:GetHoldProgress()
-            if not holdDetected and progress >= 1 - (0.5 / targetPrompt.HoldDuration) then
-                holdDetected = true
-                useTaserAndTeleport()
+        local distance = (prompt.Parent.Position - hrp.Position).Magnitude
+        if distance <= prompt.MaxActivationDistance then
+            local progress = prompt:GetHoldProgress()
+            if prompt:IsHeld() and not holdDetected[prompt] then
+                if progress >= 1 - (0.3 / prompt.HoldDuration) then
+                    holdDetected[prompt] = true
+                    useTaserAndTeleport()
+                end
             end
         end
     end
@@ -131,7 +103,7 @@ task.spawn(function()
     while true do
         task.wait(0.03)
         if running then
-            checkPromptHold(0.03)
+            checkPrompts(0.03)
         end
     end
 end)
@@ -139,14 +111,13 @@ end)
 -- 🔹 Iniciar/Detener
 local function startTaser()
     running = true
+    holdDetected = {}
     buyAndEquip()
-    detectPrompt()
 end
 
 local function stopTaser()
     running = false
-    targetPrompt = nil
-    holdDetected = false
+    holdDetected = {}
 end
 
 -- 🔹 Toggle Logic
