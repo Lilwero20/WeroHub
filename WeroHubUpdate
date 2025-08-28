@@ -1,8 +1,8 @@
 -- 🔹 Script Local (StarterGui o StarterPlayerScripts)
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
+local RunService = game:GetService("RunService")
 
 -- 🔹 Remotes
 local RFCoinsShopServiceRequestBuy = ReplicatedStorage.Packages.Net["RF/CoinsShopService/RequestBuy"] -- RemoteFunction
@@ -14,6 +14,7 @@ local toolName = "Taser Gun"
 local holding = false
 local holdStart = 0
 local holdDetected = false
+local targetPrompt = nil -- ProximityPrompt objetivo
 
 -- =================================
 -- 🔹 GUI Toggle
@@ -44,23 +45,13 @@ toggleButton.AutoButtonColor = true
 toggleButton.Active = true
 Instance.new("UICorner", toggleButton).CornerRadius = UDim.new(0, 10)
 
--- 🔹 Botón para móviles (oculto hasta ON)
-local mobileBtn = Instance.new("TextButton", screenGui)
-mobileBtn.Size = UDim2.new(0, 80, 0, 80)
-mobileBtn.Position = UDim2.new(0.85, 0, 0.75, 0)
-mobileBtn.Text = "E"
-mobileBtn.Font = Enum.Font.GothamBold
-mobileBtn.TextSize = 26
-mobileBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-mobileBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 100)
-mobileBtn.Visible = false
-Instance.new("UICorner", mobileBtn).CornerRadius = UDim.new(1, 0)
-
 -- =================================
 -- 🔹 Hacer que el Frame sea draggable
 -- =================================
 local dragging = false
 local dragStart, startPos
+local UserInputService = game:GetService("UserInputService")
+
 frame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
@@ -68,12 +59,14 @@ frame.InputBegan:Connect(function(input)
         startPos = frame.Position
     end
 end)
+
 frame.InputChanged:Connect(function(input)
     if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         local delta = input.Position - dragStart
         frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
+
 UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = false
@@ -103,48 +96,34 @@ local function useTaserAndTeleport()
     end
 end
 
--- 🔹 Función HOLD general
-local function checkHold(dt)
-    if holding and not holdDetected then
-        local holdTime = tick() - holdStart
-        local targetTime = 1.0 -- Aquí suponemos que el hold total es 1 seg
-        if holdTime >= (targetTime - 0.5) then -- 0.5 seg antes
-            holdDetected = true
-            useTaserAndTeleport()
+-- 🔹 Detectar ProximityPrompt
+local function detectPrompt()
+    -- Buscar todos los prompts en el workspace
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("ProximityPrompt") then
+            targetPrompt = obj
+            break
         end
     end
 end
 
--- 🔹 Detectar HOLD para PC
-local function setupPCControls()
-    UserInputService.InputBegan:Connect(function(input, gp)
-        if running and input.KeyCode == Enum.KeyCode.E and not gp then
-            holding = true
-            holdStart = tick()
-            holdDetected = false
-        end
-    end)
+-- 🔹 Loop para detectar hold automáticamente
+local function checkPromptHold(dt)
+    if targetPrompt then
+        local playerChar = player.Character
+        if not playerChar then return end
+        local hrp = playerChar:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
 
-    UserInputService.InputEnded:Connect(function(input, gp)
-        if running and input.KeyCode == Enum.KeyCode.E and holding then
-            holding = false
+        local distance = (targetPrompt.Parent.Position - hrp.Position).Magnitude
+        if distance <= targetPrompt.MaxActivationDistance then
+            local progress = targetPrompt:GetHoldProgress()
+            if not holdDetected and progress >= 1 - (0.5 / targetPrompt.HoldDuration) then
+                holdDetected = true
+                useTaserAndTeleport()
+            end
         end
-    end)
-end
-
--- 🔹 Detectar HOLD para Móvil
-local function setupMobileControls()
-    mobileBtn.MouseButton1Down:Connect(function()
-        if running then
-            holding = true
-            holdStart = tick()
-            holdDetected = false
-        end
-    end)
-
-    mobileBtn.MouseButton1Up:Connect(function()
-        holding = false
-    end)
+    end
 end
 
 -- 🔹 Loop principal
@@ -152,7 +131,7 @@ task.spawn(function()
     while true do
         task.wait(0.03)
         if running then
-            checkHold(0.03)
+            checkPromptHold(0.03)
         end
     end
 end)
@@ -161,16 +140,16 @@ end)
 local function startTaser()
     running = true
     buyAndEquip()
-    mobileBtn.Visible = UserInputService.TouchEnabled
+    detectPrompt()
 end
+
 local function stopTaser()
     running = false
-    mobileBtn.Visible = false
+    targetPrompt = nil
+    holdDetected = false
 end
 
 -- 🔹 Toggle Logic
-setupPCControls()
-setupMobileControls()
 toggleButton.MouseButton1Click:Connect(function()
     if running then
         stopTaser()
