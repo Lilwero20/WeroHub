@@ -1,15 +1,22 @@
+-- LocalScript (pegar en StarterPlayerScripts o StarterGui)
+-- Menu "idéntico" estilo Nameless Hub, responsive, sin ScrollingFrame.
+-- Toggle NO se activa al scrollear; solo se activa al presionar (tap/click).
+-- ImageId del logo que abre/cierra: 73356133683404
+
+local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 
--- Config
-local LOGO_ASSET_ID = "rbxassetid://73356133683404" -- tu id
-local DRAG_THRESHOLD = 8 -- px: si el movimiento excede esto se considera scroll/drag
-local SCROLL_SPEED_WHEEL = 60 -- px per wheel tick
+---- CONFIG ------------------------------------------------
+local LOGO_ASSET_ID = "rbxassetid://73356133683404"
+local DRAG_THRESHOLD = 8 -- px para distinguir drag vs tap
+local WHEEL_SCROLL_PIXELS = 80
+local PADDING = 16
+local smallScreenWidthThreshold = 900
 
--- Detectar si dispositivo táctil
-local isTouchDevice = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
-
--- Helper para crear instances
+---- HELPERS ------------------------------------------------
 local function new(className, props)
 	local obj = Instance.new(className)
 	if props then
@@ -24,326 +31,365 @@ local function new(className, props)
 	return obj
 end
 
--- Root ScreenGui
-local screenGui = new("ScreenGui", {Name = "NamelessHubGUI", ResetOnSpawn = false, Parent = game:GetService("StarterGui")})
-screenGui.IgnoreGuiInset = true
+local function isTouchOnly()
+	return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+end
 
--- Responsive scale depending on screen size
-local screenSize = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280,720)
-local smallScreen = math.max(screenSize.X, screenSize.Y) < 900 or isTouchDevice
+---- SCREEN GUI ------------------------------------------------
+local screenGui = new("ScreenGui", {
+	Name = "NamelessHub_GUI",
+	Parent = playerGui,
+	DisplayOrder = 9999,
+	IgnoreGuiInset = true,
+	ResetOnSpawn = false
+})
 
--- Styles (colores aproximados)
-local colors = {
-	bg = Color3.fromRGB(26, 25, 30),
-	panel = Color3.fromRGB(30,30,35),
-	accent1 = Color3.fromRGB(204, 47, 120),
-	accent2 = Color3.fromRGB(90,45,170),
-	item = Color3.fromRGB(45,45,50),
-	text = Color3.fromRGB(227,227,230),
-	subtext = Color3.fromRGB(170,170,176),
-	switchBg = Color3.fromRGB(72,72,78),
-	switchOn = Color3.fromRGB(160,160,255)
-}
+---- Responsividad base ---------------------------------------
+local function getViewport()
+	local cam = workspace.CurrentCamera
+	if cam then return cam.ViewportSize end
+	return Vector2.new(1280,720)
+end
 
--- Open/Close circular button (logo)
-local openButton = new("ImageButton", {
-	Name = "OpenButton",
+local viewport = getViewport()
+local smallScreen = (math.max(viewport.X, viewport.Y) < smallScreenWidthThreshold) or isTouchOnly()
+
+local function recomputeVars()
+	viewport = getViewport()
+	smallScreen = (math.max(viewport.X, viewport.Y) < smallScreenWidthThreshold) or isTouchOnly()
+end
+workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(function() recomputeVars() end)
+UserInputService:GetPropertyChangedSignal("TouchEnabled"):Connect(function() recomputeVars() end)
+
+---- COLORES & ESTILO ----------------------------------------
+local C = {}
+C.bg = Color3.fromRGB(19, 19, 22)
+C.panel = Color3.fromRGB(30, 30, 36)
+C.item = Color3.fromRGB(38, 38, 44)
+C.text = Color3.fromRGB(236,236,240)
+C.subtext = Color3.fromRGB(170,170,180)
+C.purple = Color3.fromRGB(153, 63, 211) -- morado
+C.pink = Color3.fromRGB(236, 64, 122) -- rosa
+C.toggleOn = Color3.fromRGB(200,200,255)
+
+---- OPEN/CLOSE CIRCULAR BUTTON --------------------------------
+local openButtonSize = smallScreen and 58 or 76
+local openBtn = new("ImageButton", {
+	Name = "NH_OpenButton",
 	Parent = screenGui,
 	Image = LOGO_ASSET_ID,
-	BackgroundTransparency = 1,
-	Size = UDim2.new(0, smallScreen and 62 or 78, 0, smallScreen and 62 or 78),
-	Position = UDim2.new(0, 20, 0, 18),
-	AnchorPoint = Vector2.new(0,0),
-	ZIndex = 5,
+	BackgroundTransparency = 0,
+	BackgroundColor3 = C.bg,
+	Size = UDim2.new(0, openButtonSize, 0, openButtonSize),
+	Position = UDim2.new(0, 18, 0, 24),
+	AutoButtonColor = false,
+	ZIndex = 100,
 	ScaleType = Enum.ScaleType.Fit
 })
--- Ring behind for border
-local openRing = new("Frame", {
-	Parent = openButton,
-	Size = UDim2.new(1,6,1,6),
-	Position = UDim2.new(0,-3,0,-3),
-	BackgroundTransparency = 1,
-	ZIndex = 4
-})
-local ringUICorner = new("UICorner", {Parent = openButton, CornerRadius = UDim.new(1,0)})
+new("UICorner", {Parent = openBtn, CornerRadius = UDim.new(1,0)})
+-- Border glow ring (double stroke feel)
+local openStroke = new("UIStroke", {Parent = openBtn, Color = C.pink, Thickness = 3})
+openStroke.Transparency = 0.0
 
--- Main menu frame (initially hidden)
-local mainFrame = new("Frame", {
-	Name = "MainFrame",
+---- MAIN MENU FRAME (centered) --------------------------------
+local mainW = smallScreen and 520 or 820
+local mainH = smallScreen and 360 or 560
+local mainOuter = new("Frame", {
+	Name = "NH_MainOuter",
 	Parent = screenGui,
-	Size = UDim2.new(0, smallScreen and 520 or 820, 0, smallScreen and 360 or 560),
+	Size = UDim2.new(0, mainW + 10, 0, mainH + 10),
 	Position = UDim2.new(0.5, 0, 0.5, 0),
-	AnchorPoint = Vector2.new(0.5,0.5),
-	BackgroundColor3 = colors.panel,
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	BackgroundTransparency = 1,
+	ZIndex = 90,
+	Visible = false
+})
+-- Outline (purple/pink border)
+local outline = new("Frame", {
+	Parent = mainOuter,
+	Size = UDim2.new(1,0,1,0),
+	Position = UDim2.new(0,0,0,0),
+	BackgroundColor3 = C.pink,
+	BorderSizePixel = 0
+})
+new("UICorner", {Parent = outline, CornerRadius = UDim.new(0,16)})
+-- Inner main
+local mainFrame = new("Frame", {
+	Parent = outline,
+	Size = UDim2.new(1, -8, 1, -8),
+	Position = UDim2.new(0,4,0,4),
+	BackgroundColor3 = C.panel,
 	BorderSizePixel = 0,
-	ZIndex = 4,
-	Visible = false,
+	ZIndex = 91,
 	ClipsDescendants = true
 })
 new("UICorner", {Parent = mainFrame, CornerRadius = UDim.new(0,14)})
--- Outer gradient accent top
-local topAccent = new("Frame", {
-	Parent = mainFrame,
-	Size = UDim2.new(1,0,0,8),
-	Position = UDim2.new(0,0,0,0),
-	BackgroundColor3 = colors.accent1,
-	BorderSizePixel = 0,
-	ZIndex = 6
-})
-new("UICorner", {Parent = topAccent, CornerRadius = UDim.new(0,6)})
 
--- Header
+-- Top thin purple line and header
 local header = new("Frame", {
 	Parent = mainFrame,
-	Size = UDim2.new(1,-20,0,60),
-	Position = UDim2.new(0,10,0,8),
+	Size = UDim2.new(1, -32, 0, 66),
+	Position = UDim2.new(0,16,0,8),
 	BackgroundTransparency = 1
 })
-local headerText = new("TextLabel", {
+local title = new("TextLabel", {
 	Parent = header,
 	Text = "Nameless Hub",
-	TextColor3 = colors.text,
+	BackgroundTransparency = 1,
+	TextColor3 = C.text,
 	Font = Enum.Font.GothamBold,
 	TextSize = smallScreen and 20 or 28,
-	BackgroundTransparency = 1,
-	Position = UDim2.new(0,0,0,0),
-	Size = UDim2.new(0.7,0,1,0),
-	TextXAlignment = Enum.TextXAlignment.Left
+	Size = UDim2.new(1,0,1,0),
+	TextXAlignment = Enum.TextXAlignment.Center
 })
--- Close button on header
+-- small horizontal accent line under title
+local accentLine = new("Frame", {
+	Parent = mainFrame,
+	Size = UDim2.new(1, -40, 0, 6),
+	Position = UDim2.new(0,20,0,74),
+	BackgroundColor3 = C.purple,
+	BorderSizePixel = 0
+})
+new("UICorner", {Parent = accentLine, CornerRadius = UDim.new(0,4)})
+
+-- Close X button (top-right)
 local closeBtn = new("TextButton", {
-	Parent = header,
+	Parent = mainFrame,
 	Text = "✕",
 	Font = Enum.Font.GothamBold,
-	TextSize = smallScreen and 18 or 22,
-	BackgroundTransparency = 0.9,
-	Size = UDim2.new(0,38,0,38),
-	Position = UDim2.new(1,-38,0,4),
-	TextColor3 = colors.text
+	TextSize = smallScreen and 16 or 20,
+	TextColor3 = C.text,
+	BackgroundColor3 = Color3.fromRGB(45,45,50),
+	Size = UDim2.new(0,44,0,44),
+	Position = UDim2.new(1, -64, 0, 12),
+	AutoButtonColor = false
 })
 new("UICorner", {Parent = closeBtn, CornerRadius = UDim.new(0,8)})
+new("UIStroke", {Parent = closeBtn, Color = Color3.fromRGB(60,60,65), Thickness = 1})
 
--- Layout: left tabs column and right content column
+---- LAYOUT: LEFT TABS and RIGHT CONTENT -----------------------
+local leftW = smallScreen and 180 or 240
 local leftCol = new("Frame", {
 	Parent = mainFrame,
-	Size = UDim2.new(0, smallScreen and 140 or 200, 1, -80),
-	Position = UDim2.new(0,12,0,72),
-	BackgroundColor3 = colors.bg,
+	Size = UDim2.new(0, leftW, 1, -110),
+	Position = UDim2.new(0, 18, 0, 92),
+	BackgroundColor3 = Color3.fromRGB(23,23,28),
 	BorderSizePixel = 0
 })
 new("UICorner", {Parent = leftCol, CornerRadius = UDim.new(0,10)})
+
+local divider = new("Frame", {
+	Parent = mainFrame,
+	Size = UDim2.new(0, 6, 1, -110),
+	Position = UDim2.new(0, leftW + 26, 0, 92),
+	BackgroundColor3 = C.purple,
+	BorderSizePixel = 0
+})
+new("UICorner", {Parent = divider, CornerRadius = UDim.new(0,4)})
+
 local rightCol = new("Frame", {
 	Parent = mainFrame,
-	Size = UDim2.new(1, - (smallScreen and 170 or 240), 1, -80),
-	Position = UDim2.new(0, (smallScreen and 170 or 240), 0, 72),
-	BackgroundColor3 = Color3.fromRGB(22,22,26),
+	Size = UDim2.new(1, - (leftW + 60), 1, -110),
+	Position = UDim2.new(0, leftW + 34, 0, 92),
+	BackgroundColor3 = Color3.fromRGB(28,28,33),
 	BorderSizePixel = 0,
 	ClipsDescendants = true
 })
 new("UICorner", {Parent = rightCol, CornerRadius = UDim.new(0,10)})
 
--- Left tabs list
-local tabsList = new("Frame", {
-	Parent = leftCol,
-	Size = UDim2.new(1,0,1,0),
-	BackgroundTransparency = 1
-})
-local tabsLayout = new("UIListLayout", {
-	Parent = tabsList,
-	Padding = UDim.new(0, 14),
-	SortOrder = Enum.SortOrder.LayoutOrder
-})
+-- Tabs column: UIListLayout for spacing similar to image
+local tabsContainer = new("Frame", {Parent = leftCol, Size = UDim2.new(1, -16, 1, -16), Position = UDim2.new(0,8,0,8), BackgroundTransparency = 1})
+local tabsLayout = new("UIListLayout", {Parent = tabsContainer, Padding = UDim.new(0, 14), SortOrder = Enum.SortOrder.LayoutOrder})
 tabsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 tabsLayout.VerticalAlignment = Enum.VerticalAlignment.Top
-tabsLayout.Padding = UDim.new(0, 12)
 
--- Right content container (no ScrollingFrame)
+-- Content area: we will manage scrolling manually, no ScrollingFrame
 local contentMask = new("Frame", {
 	Parent = rightCol,
-	Size = UDim2.new(1, -16, 1, -16),
-	Position = UDim2.new(0, 8, 0, 8),
+	Size = UDim2.new(1, -24, 1, -24),
+	Position = UDim2.new(0, 12, 0, 12),
 	BackgroundTransparency = 1,
 	ClipsDescendants = true
 })
 local contentInner = new("Frame", {
 	Parent = contentMask,
-	Size = UDim2.new(1, 0, 0, 0), -- height will be updated según items
+	Size = UDim2.new(1, 0, 0, 0),
 	Position = UDim2.new(0, 0, 0, 0),
 	BackgroundTransparency = 1
 })
 
--- Track content offset in pixels
+-- Track content offset and height
 local contentOffset = 0
 local contentInnerHeight = 0
-local contentMaskSizeY = 0
-local function recalcMaskSize()
+local function recalcMask()
 	contentMaskSizeY = contentMask.AbsoluteSize.Y
 end
-contentMask:GetPropertyChangedSignal("AbsoluteSize"):Connect(recalcMaskSize)
-recalcMaskSize()
+contentMask:GetPropertyChangedSignal("AbsoluteSize"):Connect(recalcMask)
+recalcMask()
 
--- Función para actualizar posicion de contentInner según contentOffset, con clamps
-local function clampContentOffset(v)
-	local maxOffset = math.max(0, contentInnerHeight - contentMaskSizeY)
-	if v < -maxOffset then v = -maxOffset end
+local function clampOffset(v)
+	local max = math.max(0, contentInnerHeight - contentMask.AbsoluteSize.Y)
 	if v > 0 then v = 0 end
+	if v < -max then v = -max end
 	return v
 end
-local function updateContentPosition()
-	contentOffset = clampContentOffset(contentOffset)
+local function updateContentPos()
+	contentOffset = clampOffset(contentOffset)
 	contentInner.Position = UDim2.new(0, 0, 0, contentOffset)
 end
 
--- Helper: crear una tab izquierda
+---- TAB CREATION ------------------------------------------------
 local tabs = {}
-local activeTab = nil
-local function createTab(name)
+local activeTabName = nil
+local tabsRegistry = {}
+
+local function createTabButton(name)
 	local btn = new("TextButton", {
-		Parent = tabsList,
+		Parent = tabsContainer,
 		Text = name,
-		Size = UDim2.new(1, -18, 0, smallScreen and 42 or 56),
-		BackgroundColor3 = Color3.fromRGB(47,47,52),
-		TextColor3 = colors.text,
-		Font = Enum.Font.GothamBold,
+		Font = Enum.Font.GothamSemibold,
 		TextSize = smallScreen and 16 or 18,
-		AutoButtonColor = false,
-		BorderSizePixel = 0
+		TextColor3 = C.text,
+		Size = UDim2.new(1, -12, 0, smallScreen and 44 or 56),
+		BackgroundColor3 = Color3.fromRGB(49,49,56),
+		BorderSizePixel = 0,
+		AutoButtonColor = false
 	})
-	new("UICorner", {Parent = btn, CornerRadius = UDim.new(0,8)})
-	btn.MouseButton1Click:Connect(function()
-		-- switch tab
-		for _,t in ipairs(tabs) do
-			t.Button.BackgroundColor3 = Color3.fromRGB(47,47,52)
-		end
-		btn.BackgroundColor3 = colors.accent2
-		activeTab = name
-		-- show tab content
-		if tabsIndex[name] and tabsIndex[name].onOpen then
-			tabsIndex[name].onOpen()
-		end
-	end)
-	local entry = {Name = name, Button = btn}
-	table.insert(tabs, entry)
-	return entry
+	new("UICorner", {Parent = btn, CornerRadius = UDim.new(0,10)})
+	local stroke = new("UIStroke", {Parent = btn, Color = Color3.fromRGB(55,55,62), Thickness = 1})
+	return btn
 end
 
--- Storage for tabs content builders
-tabsIndex = {}
+local function setActiveTab(name)
+	-- visual update of tabs
+	for k,entry in pairs(tabsRegistry) do
+		local btn = entry.Button
+		if k == name then
+			btn.BackgroundColor3 = C.purple
+			btn.TextColor3 = Color3.fromRGB(245,245,245)
+		else
+			btn.BackgroundColor3 = Color3.fromRGB(49,49,56)
+			btn.TextColor3 = C.text
+		end
+	end
+	activeTabName = name
+	-- call onOpen to populate content
+	if tabsRegistry[name] and tabsRegistry[name].onOpen then
+		tabsRegistry[name].onOpen()
+	end
+end
 
--- Función para limpiar el contentInner
+---- CONTENT MANAGEMENT -----------------------------------------
 local function clearContent()
-	for _,c in ipairs(contentInner:GetChildren()) do
-		c:Destroy()
+	for _,v in ipairs(contentInner:GetChildren()) do
+		v:Destroy()
 	end
 	contentInnerHeight = 0
 	contentInner.Size = UDim2.new(1,0,0,0)
 	contentOffset = 0
-	updateContentPosition()
+	updateContentPos()
 end
 
--- Función para crear un item visual (container) y ajustar contentInnerHeight
-local function pushContent(itemFrame)
-	itemFrame.Parent = contentInner
-	-- position based on current contentInnerHeight
-	itemFrame.Position = UDim2.new(0, 0, 0, contentInnerHeight)
-	contentInnerHeight = contentInnerHeight + itemFrame.Size.Y.Offset
+local function pushContentFrame(frame)
+	frame.Parent = contentInner
+	frame.Position = UDim2.new(0, 0, 0, contentInnerHeight)
+	contentInnerHeight = contentInnerHeight + frame.Size.Y.Offset
 	contentInner.Size = UDim2.new(1, 0, 0, contentInnerHeight)
 end
 
--- createToggle: crea toggle y lo añade al contentInner
--- label (string), default (bool), callback(state)
-local function createToggle(label, default, callback)
-	local itemHeight = smallScreen and 56 or 72
-	local item = new("Frame", {
-		Size = UDim2.new(1, 0, 0, itemHeight),
-		BackgroundColor3 = colors.item,
-		BorderSizePixel = 0
-	})
+---- TOGGLE CREATOR (con proteccion contra scroll) --------------
+local function createToggle(labelText, default, callback)
+	local itemH = smallScreen and 56 or 72
+	local item = new("Frame", {Size = UDim2.new(1, 0, 0, itemH), BackgroundColor3 = C.item, BorderSizePixel = 0})
 	new("UICorner", {Parent = item, CornerRadius = UDim.new(0,10)})
+
 	local lbl = new("TextLabel", {
 		Parent = item,
-		Text = label,
-		BackgroundTransparency = 1,
-		Size = UDim2.new(0.7, -16, 1, 0),
+		Size = UDim2.new(0.75, -24, 1, 0),
 		Position = UDim2.new(0, 14, 0, 0),
-		TextColor3 = colors.text,
+		BackgroundTransparency = 1,
+		Text = labelText,
+		TextColor3 = C.text,
 		Font = Enum.Font.Gotham,
 		TextSize = smallScreen and 14 or 18,
 		TextXAlignment = Enum.TextXAlignment.Left
 	})
 	local sub = new("TextLabel", {
 		Parent = item,
-		Text = "",
+		Size = UDim2.new(0.75, -24, 0, 18),
+		Position = UDim2.new(0, 14, 1, -22),
 		BackgroundTransparency = 1,
-		Size = UDim2.new(0.7, -16, 1, 0),
-		Position = UDim2.new(0, 14, 0, itemHeight - 20),
-		TextColor3 = colors.subtext,
+		Text = "",
+		TextColor3 = C.subtext,
 		Font = Enum.Font.Gotham,
-		TextSize = smallScreen and 11 or 13,
+		TextSize = smallScreen and 12 or 13,
 		TextXAlignment = Enum.TextXAlignment.Left
 	})
-	-- Switch visual
+
+	-- switch background
+	local switchW = smallScreen and 56 or 78
+	local switchH = smallScreen and 28 or 36
 	local switchBg = new("Frame", {
 		Parent = item,
-		Size = UDim2.new(0, smallScreen and 48 or 64, 0, smallScreen and 26 or 34),
-		Position = UDim2.new(1, -(smallScreen and 66 or 80), 0.5, -(smallScreen and 13 or 17)),
-		BackgroundColor3 = colors.switchBg,
-		BorderSizePixel = 0,
-		ZIndex = 3
+		Size = UDim2.new(0, switchW, 0, switchH),
+		Position = UDim2.new(1, - (switchW + 18), 0.5, -(switchH/2)),
+		BackgroundColor3 = Color3.fromRGB(80,80,86),
+		BorderSizePixel = 0
 	})
 	new("UICorner", {Parent = switchBg, CornerRadius = UDim.new(0,16)})
+	local knobSize = smallScreen and 20 or 26
 	local knob = new("Frame", {
 		Parent = switchBg,
-		Size = UDim2.new(0, (smallScreen and 20 or 26), 0, (smallScreen and 20 or 26)),
-		Position = default and UDim2.new(1, -((smallScreen and 20 or 26) + 4), 0.5, -((smallScreen and 10 or 13))) or UDim2.new(0, 4, 0.5, -((smallScreen and 10 or 13))),
-		BackgroundColor3 = default and colors.switchOn or Color3.fromRGB(245,245,245),
-		ZIndex = 4
+		Size = UDim2.new(0, knobSize, 0, knobSize),
+		Position = default and UDim2.new(1, -(knobSize+6), 0.5, -(knobSize/2)) or UDim2.new(0, 6, 0.5, -(knobSize/2)),
+		BackgroundColor3 = default and C.toggleOn or Color3.fromRGB(245,245,245),
+		BorderSizePixel = 0,
+		ZIndex = 2
 	})
 	new("UICorner", {Parent = knob, CornerRadius = UDim.new(1,0)})
-	-- Internal state
+
+	-- state
 	local state = default
 
-	-- Input handling: queremos evitar toggles al hacer drag scroll.
-	-- Lógica: cuando el usuario inicia input en el switch, registrar start position.
-	-- Si durante InputChanged el movimiento supera DRAG_THRESHOLD => es drag y NO togglear.
-	-- Cuando InputEnded: si no fue drag -> toggle estado.
+	-- Input detection: guard against scroll dragging
 	local activeInput = nil
 	local startPos = nil
 	local isDrag = false
 	local originContentOffset = 0
-	local function onInputBegan(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+
+	local function inputBegan(input)
+		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
 			activeInput = input
-			isDrag = false
 			startPos = input.Position
+			isDrag = false
 			originContentOffset = contentOffset
 		end
 	end
-	local function onInputChanged(input)
-		if activeInput and input.UserInputType == activeInput.UserInputType and input == activeInput then
+
+	local function inputChanged(input)
+		if activeInput and input == activeInput then
 			local delta = input.Position - startPos
 			if math.abs(delta.Y) > DRAG_THRESHOLD then
 				isDrag = true
-				-- scroll content by moving contentOffset accordingly
+				-- if dragging, we want to scroll the content (so toggles won't toggle)
 				contentOffset = originContentOffset + delta.Y
-				updateContentPosition()
+				updateContentPos()
 			end
 		end
 	end
-	local function onInputEnded(input)
+
+	local function inputEnded(input)
 		if activeInput and input == activeInput then
 			if not isDrag then
 				-- toggle
 				state = not state
-				-- animate switch (simple instant)
 				if state then
-					knob.Position = UDim2.new(1, -((smallScreen and 20 or 26) + 4), 0.5, -((smallScreen and 10 or 13)))
-					knob.BackgroundColor3 = colors.switchOn
+					knob.Position = UDim2.new(1, -(knobSize+6), 0.5, -(knobSize/2))
+					knob.BackgroundColor3 = C.toggleOn
 				else
-					knob.Position = UDim2.new(0, 4, 0.5, -((smallScreen and 10 or 13)))
+					knob.Position = UDim2.new(0, 6, 0.5, -(knobSize/2))
 					knob.BackgroundColor3 = Color3.fromRGB(245,245,245)
 				end
-				-- callback
 				if callback then
 					pcall(callback, state)
 				end
@@ -354,191 +400,166 @@ local function createToggle(label, default, callback)
 		end
 	end
 
-	-- Conectar eventos de input
-	switchBg.InputBegan:Connect(onInputBegan)
-	switchBg.InputChanged:Connect(onInputChanged)
-	switchBg.InputEnded:Connect(onInputEnded)
-	-- También escuchar cambios globales (touch/mouse moved)
-	UserInputService.InputChanged:Connect(function(input)
-		-- mouse wheel handled globally
-		onInputChanged(input)
-	end)
-	UserInputService.InputEnded:Connect(function(input) onInputEnded(input) end)
+	-- Connect input events specifically to switchBg (to avoid interfering with other UI)
+	switchBg.InputBegan:Connect(inputBegan)
+	switchBg.InputChanged:Connect(inputChanged)
+	switchBg.InputEnded:Connect(inputEnded)
 
-	pushContent(item)
-	-- retornar referencia por si el usuario quiere manipularlo
+	-- Also listen to global InputChanged/Ended to catch touch/mouse changes reliably
+	UserInputService.InputChanged:Connect(function(inp)
+		if inp == activeInput then inputChanged(inp) end
+	end)
+	UserInputService.InputEnded:Connect(function(inp) if inp == activeInput then inputEnded(inp) end end)
+
+	pushContentFrame(item)
+	-- return api
 	return {
-		Frame = item,
 		GetState = function() return state end,
 		SetState = function(v)
 			state = v
 			if state then
-				knob.Position = UDim2.new(1, -((smallScreen and 20 or 26) + 4), 0.5, -((smallScreen and 10 or 13)))
-				knob.BackgroundColor3 = colors.switchOn
+				knob.Position = UDim2.new(1, -(knobSize+6), 0.5, -(knobSize/2))
+				knob.BackgroundColor3 = C.toggleOn
 			else
-				knob.Position = UDim2.new(0, 4, 0.5, -((smallScreen and 10 or 13)))
+				knob.Position = UDim2.new(0, 6, 0.5, -(knobSize/2))
 				knob.BackgroundColor3 = Color3.fromRGB(245,245,245)
 			end
-		end
+		end,
+		Frame = item
 	}
 end
 
--- Soporte para scroll con rueda del mouse
-UserInputService.InputChanged:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseWheel then
-		local delta = input.Position.Z -- wheel delta
-		contentOffset = contentOffset + (-delta * SCROLL_SPEED_WHEEL)
-		updateContentPosition()
-	end
-end)
-
--- Drag overall content by touching anywhere in contentMask
+---- MANUAL SCROLL: touch drag + mouse wheel ----------------------
+-- drag over contentMask
 do
 	local active = nil
 	local startY = 0
 	local startOffset = 0
-	UserInputService.InputBegan:Connect(function(input, processed)
-		if processed then return end
-		if (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1) then
-			-- check if input started inside contentMask
-			local absPos = input.Position
-			local guiPos = contentMask.AbsolutePosition
-			local guiSize = contentMask.AbsoluteSize
-			if absPos.X >= guiPos.X and absPos.X <= guiPos.X + guiSize.X and absPos.Y >= guiPos.Y and absPos.Y <= guiPos.Y + guiSize.Y then
-				active = input
-				startY = absPos.Y
-				startOffset = contentOffset
-			end
+	contentMask.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+			active = input
+			startY = input.Position.Y
+			startOffset = contentOffset
+			-- capture so toggles detect drag as well (they compare start pos)
 		end
 	end)
-	UserInputService.InputChanged:Connect(function(input)
-		if active and input == active and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
+	contentMask.InputChanged:Connect(function(input)
+		if active and input == active then
 			local delta = input.Position.Y - startY
 			if math.abs(delta) > DRAG_THRESHOLD then
 				contentOffset = startOffset + delta
-				updateContentPosition()
+				updateContentPos()
 			end
 		end
 	end)
-	UserInputService.InputEnded:Connect(function(input)
-		if active and input == active then
-			active = nil
-		end
+	contentMask.InputEnded:Connect(function(input)
+		if active and input == active then active = nil end
 	end)
 end
 
--- Crear pestañas y su contenido (ejemplo)
-local tabMain = createTab("Main")
-tabsIndex["Main"] = {
-	onOpen = function()
-		clearContent()
-		-- Ejemplo de toggles parecidos a la imagen
-		createToggle("Infinite Jump", false, function(state) print("Infinite Jump ->", state) end)
-		createToggle("Walk Fling", false, function(state) print("Walk Fling ->", state) end)
-		createToggle("Hide under base", false, function(state) print("Hide under base ->", state) end)
-		createToggle("Anti Hit", false, function(state) print("Anti Hit ->", state) end)
-		createToggle("Base Protector", false, function(state) print("Base Protector ->", state) end)
+-- mouse wheel
+UserInputService.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseWheel then
+		local delta = input.Position.Z
+		contentOffset = contentOffset + (-delta * WHEEL_SCROLL_PIXELS)
+		updateContentPos()
 	end
-}
+end)
 
-local tabSettings = createTab("Settings")
-tabsIndex["Settings"] = {
-	onOpen = function()
-		clearContent()
-		createToggle("Auto Rejoin", false, function(s) print("Auto Rejoin", s) end)
-		createToggle("Auto Collect", true, function(s) print("Auto Collect", s) end)
-		createToggle("FPS Saver", false, function(s) print("FPS Saver", s) end)
-	end
-}
-
-local tabESP = createTab("ESP")
-tabsIndex["ESP"] = {
-	onOpen = function()
-		clearContent()
-		createToggle("Show Names", true, function(s) end)
-		createToggle("Show Boxes", false, function(s) end)
-	end
-}
-
-local tabInfo = createTab("Info")
-tabsIndex["Info"] = {
-	onOpen = function()
-		clearContent()
-		-- info item (no toggle)
-		local infoItem = new("Frame", {
-			Size = UDim2.new(1,0,0, (smallScreen and 80 or 120)),
-			BackgroundColor3 = colors.item
-		})
-		new("UICorner", {Parent = infoItem, CornerRadius = UDim.new(0,10)})
-		local t = new("TextLabel", {
-			Parent = infoItem,
-			Size = UDim2.new(1, -20, 1, -20),
-			Position = UDim2.new(0, 10, 0, 10),
-			BackgroundTransparency = 1,
-			Text = "Nameless Hub\nVersion 1.0\nBy: You",
-			TextColor3 = colors.text,
-			TextSize = smallScreen and 12 or 16,
-			Font = Enum.Font.GothamBold,
-			TextXAlignment = Enum.TextXAlignment.Left
-		})
-		pushContent(infoItem)
-	end
-}
-
--- Initially open the first tab
-if #tabs > 0 then
-	local first = tabs[1]
-	first.Button.BackgroundColor3 = colors.accent2
-	activeTab = first.Name
-	if tabsIndex[first.Name] and tabsIndex[first.Name].onOpen then
-		tabsIndex[first.Name].onOpen()
-	end
+---- TABS CONTENT (ejemplo igual a la imagen) --------------------
+-- Register tabs: Main, Settings, ESP, Info
+local function registerTab(name, onOpen)
+	local btn = createTabButton(name)
+	tabsRegistry[name] = {Button = btn, onOpen = onOpen}
+	-- connect click
+	btn.MouseButton1Click:Connect(function()
+		setActiveTab(name)
+	end)
 end
 
--- Open/Close animations (simple)
+-- Main
+registerTab("Main", function()
+	clearContent()
+	createToggle("Infinite Jump", false, function(s) print("Infinite Jump:", s) end)
+	createToggle("Walk Fling", false, function(s) print("Walk Fling:", s) end)
+	createToggle("Hide under base", false, function(s) print("Hide under base:", s) end)
+	createToggle("Anti Hit", false, function(s) print("Anti Hit:", s) end)
+	createToggle("Base Protector", false, function(s) print("Base Protector:", s) end)
+end)
+
+-- Settings
+registerTab("Settings", function()
+	clearContent()
+	createToggle("Auto Rejoin", false, function(s) end)
+	createToggle("Auto Collect", true, function(s) end)
+	createToggle("Low Graphics", false, function(s) end)
+end)
+
+-- ESP
+registerTab("ESP", function()
+	clearContent()
+	createToggle("Show Names", true, function(s) end)
+	createToggle("Show Boxes", false, function(s) end)
+end)
+
+-- Info
+registerTab("Info", function()
+	clearContent()
+	local infoH = smallScreen and 100 or 120
+	local infoFrame = new("Frame", {Size = UDim2.new(1,0,0,infoH), BackgroundColor3 = C.item, BorderSizePixel = 0})
+	new("UICorner", {Parent = infoFrame, CornerRadius = UDim.new(0,10)})
+	local txt = new("TextLabel", {
+		Parent = infoFrame,
+		Size = UDim2.new(1, -24, 1, -24),
+		Position = UDim2.new(0, 12, 0, 12),
+		BackgroundTransparency = 1,
+		Text = "Nameless Hub\nVersion 1.0\nBy: You",
+		TextColor3 = C.text,
+		Font = Enum.Font.Gotham,
+		TextSize = smallScreen and 12 or 16,
+		TextXAlignment = Enum.TextXAlignment.Left
+	})
+	pushContentFrame(infoFrame)
+end)
+
+-- Set initial tab
+setActiveTab("Main")
+
+---- OPEN / CLOSE BEHAVIOR (con Tween para suavidad) ------------
 local menuOpen = false
-local function openMenu()
-	mainFrame.Visible = true
-	menuOpen = true
-end
-local function closeMenu()
-	mainFrame.Visible = false
-	menuOpen = false
-end
-
-openButton.MouseButton1Click:Connect(function()
+local tweenInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+openBtn.MouseButton1Click:Connect(function()
+	menuOpen = not menuOpen
+	mainOuter.Visible = menuOpen
+	-- pequeña animacion de escala
 	if menuOpen then
-		closeMenu()
+		mainOuter.Size = UDim2.new(0, 0, 0, 0)
+		mainOuter.Visible = true
+		local t = TweenService:Create(mainOuter, tweenInfo, {Size = UDim2.new(0, mainW + 10, 0, mainH + 10)})
+		t:Play()
 	else
-		openMenu()
-	end
-end)
-closeBtn.MouseButton1Click:Connect(function() closeMenu() end)
-
--- Make tabs keyboard accessible (numbers 1-4)
-UserInputService.InputBegan:Connect(function(input, processed)
-	if processed then return end
-	if input.UserInputType == Enum.UserInputType.Keyboard then
-		local key = input.KeyCode
-		if key == Enum.KeyCode.One and tabs[1] then tabs[1].Button:Activate() end
-		if key == Enum.KeyCode.Two and tabs[2] then tabs[2].Button:Activate() end
-		if key == Enum.KeyCode.Three and tabs[3] then tabs[3].Button:Activate() end
-		if key == Enum.KeyCode.Four and tabs[4] then tabs[4].Button:Activate() end
-		if key == Enum.KeyCode.Backspace then closeMenu() end
+		local t = TweenService:Create(mainOuter, tweenInfo, {Size = UDim2.new(0, 0, 0, 0)})
+		t.Completed:Connect(function() mainOuter.Visible = false end)
+		t:Play()
 	end
 end)
 
--- Ajustes responsivos al redimensionar pantalla
-local function recomputeSizes()
-	local vs = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280,720)
-	smallScreen = math.max(vs.X, vs.Y) < 900 or UserInputService.TouchEnabled
-	-- update sizes quickly (minimal)
-	openButton.Size = UDim2.new(0, smallScreen and 62 or 78, 0, smallScreen and 62 or 78)
-	mainFrame.Size = UDim2.new(0, smallScreen and 520 or 820, 0, smallScreen and 360 or 560)
-	headerText.TextSize = smallScreen and 20 or 28
+closeBtn.MouseButton1Click:Connect(function()
+	if menuOpen then
+		menuOpen = false
+		local t = TweenService:Create(mainOuter, tweenInfo, {Size = UDim2.new(0, 0, 0, 0)})
+		t.Completed:Connect(function() mainOuter.Visible = false end)
+		t:Play()
+	end
+end)
+
+-- Ensure open button is visible on all screen sizes and reposition if needed
+local function updatePositions()
+	openBtn.Size = UDim2.new(0, smallScreen and 58 or 76, 0, smallScreen and 58 or 76)
+	mainOuter.Size = UDim2.new(0, mainW + 10, 0, mainH + 10)
+	mainFrame.Size = UDim2.new(1, -8, 1, -8)
 end
-workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(recomputeSizes)
-recomputeSizes()
+workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updatePositions)
+updatePositions()
 
--- FIN del script
-print("Nameless Hub GUI cargado.")
+print("Nameless Hub GUI cargado y listo.")
