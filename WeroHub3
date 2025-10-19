@@ -1,3 +1,11 @@
+-- WeroHubMenu - Script corregido
+-- Cambios:
+-- 1) Menú centrado en todas las pantallas
+-- 2) Icono arrastrable incluso tocando IconButton
+-- 3) Toggles solo activan al tap (no al scrollear)
+-- 4) Tabs con padding correcto
+-- 5) Ajuste de tamaño en móvil para que el menú no se salga
+
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -23,6 +31,7 @@ local CONFIG = {
     IconBGColor = Color3.fromRGB(15,15,20),
     IconStrokeColor = Color3.fromRGB(150,65,255),
     IconStrokeThickness = 3,
+    MobileScale = 0.85, -- escala del menú en móvil (ajustable)
 }
 
 local function getProfileImageSource()
@@ -38,7 +47,7 @@ screenGui.ResetOnSpawn = false
 screenGui.IgnoreGuiInset = true
 screenGui.Parent = PlayerGui
 
--- ICON CONTAINER (fondo circular, no transparente)
+-- ICON CONTAINER (fondo circular)
 local IconContainer = Instance.new("Frame", screenGui)
 IconContainer.Name = "IconContainer"
 IconContainer.AnchorPoint = Vector2.new(0,0)
@@ -66,7 +75,7 @@ IconImage.ZIndex = 205
 local imgCorner = Instance.new("UICorner", IconImage)
 imgCorner.CornerRadius = UDim.new(1,0)
 
--- Botón encima para clicks
+-- Botón encima para clicks (lo vamos a usar para detectar taps y arrastre)
 local IconButton = Instance.new("ImageButton", IconContainer)
 IconButton.Name = "IconButton"
 IconButton.AnchorPoint = Vector2.new(0,0)
@@ -76,12 +85,13 @@ IconButton.BackgroundTransparency = 1
 IconButton.Image = ""
 IconButton.AutoButtonColor = false
 IconButton.ZIndex = 210
+-- No desactivar Active: manejamos taps/drag manualmente
 
 -- OUTER BORDER y MAIN FRAME (inicialmente ocultos)
 local OuterBorder = Instance.new("Frame", screenGui)
 OuterBorder.Name = "OuterBorder"
-OuterBorder.AnchorPoint = Vector2.new(0.5,1) -- bottom-center anchor para quedar encima del icono
-OuterBorder.Position = UDim2.new(0.5,0,0.5,0)
+OuterBorder.AnchorPoint = Vector2.new(0,0)
+OuterBorder.Position = UDim2.new(0,0,0,0)
 OuterBorder.Size = UDim2.new(0, CONFIG.DefaultWidth + 8, 0, CONFIG.DefaultHeight + 8)
 OuterBorder.BackgroundTransparency = 1
 OuterBorder.ZIndex = 300
@@ -91,8 +101,8 @@ OuterBorder.Visible = false
 
 local MainFrame = Instance.new("Frame", screenGui)
 MainFrame.Name = "MainFrame"
-MainFrame.AnchorPoint = Vector2.new(0.5,1)
-MainFrame.Position = UDim2.new(0.5,0,0.5,0)
+MainFrame.AnchorPoint = Vector2.new(0,0)
+MainFrame.Position = UDim2.new(0,0,0,0)
 MainFrame.Size = UDim2.new(0, CONFIG.DefaultWidth, 0, CONFIG.DefaultHeight)
 MainFrame.BackgroundColor3 = CONFIG.PanelBG
 MainFrame.Visible = false
@@ -138,9 +148,12 @@ LeftCol.BackgroundColor3 = CONFIG.PanelAccent
 LeftCol.ZIndex = MainFrame.ZIndex + 2
 local lcCorner = Instance.new("UICorner", LeftCol); lcCorner.CornerRadius = UDim.new(0,12)
 local lcStroke = Instance.new("UIStroke", LeftCol); lcStroke.Color = Color3.fromRGB(0,0,0); lcStroke.Thickness = 1; lcStroke.Transparency = 0.6
+
 local TabsLayout = Instance.new("UIListLayout", LeftCol)
-TabsLayout.Padding = UDim.new(0,12)
+TabsLayout.Padding = UDim.new(0,12) -- separación entre tabs
 TabsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+TabsLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+TabsLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
 -- Right view + content holder
 local RightView = Instance.new("Frame", MainFrame)
@@ -154,7 +167,6 @@ local ContentHolder = Instance.new("Frame", RightView)
 ContentHolder.Size = UDim2.new(1,0,0,0)
 ContentHolder.Position = UDim2.new(0,0,0,0)
 ContentHolder.BackgroundTransparency = 1
--- Important: ContentHolder must be above MainFrame so its children are visible
 ContentHolder.ZIndex = RightView.ZIndex + 2
 
 local ContentList = Instance.new("UIListLayout", ContentHolder)
@@ -178,8 +190,10 @@ local function adaptLayout()
     local isMobile = UserInputService.TouchEnabled or vw <= 900
 
     if isMobile then
-        targetW = math.min(CONFIG.MobileMaxWidth, vw - 24)
-        targetH = math.min(CONFIG.MobileMaxHeight, vh - 80)
+        -- escala el menú en móvil para evitar salirse
+        local scale = CONFIG.MobileScale
+        targetW = math.min(CONFIG.MobileMaxWidth, math.floor((vw - 24) * scale))
+        targetH = math.min(CONFIG.MobileMaxHeight, math.floor((vh - 80) * scale))
         LeftCol.Size = UDim2.new(0,140,1,-70)
         RightView.Position = UDim2.new(0,160,0,70)
         RightView.Size = UDim2.new(1, -172, 1, -82)
@@ -197,6 +211,22 @@ local function adaptLayout()
 
     MainFrame.Size = UDim2.new(0, targetW, 0, targetH)
     OuterBorder.Size = UDim2.new(0, targetW + 8, 0, targetH + 8)
+end
+
+-- nueva función: posiciona el menú **completamente centrado** en pantalla
+local function positionMenuCentered()
+    local cam = Workspace.CurrentCamera
+    if not cam then
+        return UDim2.new(0.5, 0, 0.5, 0)
+    end
+    local viewport = cam.ViewportSize
+    local vw, vh = viewport.X, viewport.Y
+
+    local menuW, menuH = targetW, targetH
+    local posX = math.floor((vw - menuW) / 2)
+    local posY = math.floor((vh - menuH) / 2)
+
+    return UDim2.new(0, posX, 0, posY)
 end
 
 -- ===== scroll logic =====
@@ -255,7 +285,6 @@ UserInputService.InputChanged:Connect(function(input)
         currentOffset = math.clamp(currentOffset + delta, -maxOffset - 200, 200)
         ContentHolder.Position = UDim2.new(0,0,0,currentOffset)
     elseif input.UserInputType == Enum.UserInputType.MouseWheel then
-        -- MouseWheel delta usually accessible via input.Position.Z
         local delta = input.Position.Z or 0
         currentOffset = math.clamp(currentOffset + delta * 26, -maxOffset, 0)
         ContentHolder.Position = UDim2.new(0,0,0,currentOffset)
@@ -291,24 +320,8 @@ RunService.Heartbeat:Connect(function(dt)
     end
 end)
 
--- ===== open/close (menu encima del icono) =====
+-- ===== open/close (menu centrado) =====
 local opened = false
-local function positionMenuAboveIcon()
-    local cam = Workspace.CurrentCamera
-    if not cam then return UDim2.new(0.5,0,0.5,0) end
-    local viewport = cam.ViewportSize
-    local vw, vh = viewport.X, viewport.Y
-
-    local iconPos = IconContainer.AbsolutePosition or Vector2.new(16,18)
-    local iconSize = IconContainer.AbsoluteSize or Vector2.new(56,56)
-    local centerX = iconPos.X + (iconSize.X * 0.5)
-    local halfW = (targetW * 0.5)
-    local clampedX = math.clamp(centerX, halfW, math.max(halfW, vw - halfW))
-    local topY = iconPos.Y
-    local pos = UDim2.new(0, clampedX, 0, math.max(8, topY - 12))
-    return pos
-end
-
 local function openMenu()
     if opened then return end
     opened = true
@@ -316,7 +329,7 @@ local function openMenu()
     OuterBorder.Visible = true
     MainFrame.Visible = true
 
-    local menuPos = positionMenuAboveIcon()
+    local menuPos = positionMenuCentered()
     OuterBorder.Position = menuPos
     MainFrame.Position = menuPos
 
@@ -328,6 +341,11 @@ local function openMenu()
 
     MainFrame.ZIndex = 301
     OuterBorder.ZIndex = 300
+
+    -- actualizar tamaño y scroll cuando esté visible
+    task.delay(0.28, function()
+        updateContentHolderSize()
+    end)
 end
 
 local function closeMenu()
@@ -341,16 +359,16 @@ local function closeMenu()
     end)
 end
 
-IconButton.MouseButton1Click:Connect(function()
-    if opened then closeMenu() else openMenu() end
-end)
+-- Close button
 CloseBtn.MouseButton1Click:Connect(closeMenu)
 
--- ===== draggable icon (mouse & touch) =====
+-- ===== draggable icon (compatible con tocar el IconButton) =====
 local dragging = false
 local dragInput = nil
 local dragStartPos = Vector2.new(0,0)
 local iconStartAbs = Vector2.new(0,0)
+local iconMoved = false
+local iconMoveThreshold = 8 -- px tolerancia para considerar que se arrastra
 
 local function clampIconPosition(absPos)
     local cam = Workspace.CurrentCamera
@@ -362,27 +380,47 @@ local function clampIconPosition(absPos)
     return Vector2.new(x, y)
 end
 
-IconContainer.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragInput = input
-        dragStartPos = input.Position
-        iconStartAbs = IconContainer.AbsolutePosition
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-                dragInput = nil
+local function beginIconInteraction(input)
+    if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
+    dragging = true
+    dragInput = input
+    iconMoved = false
+    dragStartPos = input.Position
+    iconStartAbs = IconContainer.AbsolutePosition
+
+    -- cuando termine la interacción
+    input.Changed:Connect(function()
+        if input.UserInputState == Enum.UserInputState.End then
+            -- Si no se movió lo suficiente, se considera un tap -> toggle menu
+            if not iconMoved then
+                if opened then closeMenu() else openMenu() end
             end
-        end)
-    end
+            dragging = false
+            dragInput = nil
+        end
+    end)
+end
+
+-- detectar inicio tanto en el frame como en el button
+IconContainer.InputBegan:Connect(function(input)
+    beginIconInteraction(input)
+end)
+IconButton.InputBegan:Connect(function(input)
+    beginIconInteraction(input)
 end)
 
 UserInputService.InputChanged:Connect(function(input)
     if not dragging or input ~= dragInput then return end
+    if not input.Position then return end
     local delta = input.Position - dragStartPos
-    local newAbs = iconStartAbs + delta
-    newAbs = clampIconPosition(newAbs)
-    IconContainer.Position = UDim2.new(0, newAbs.X, 0, newAbs.Y)
+    if (math.abs(delta.X) > iconMoveThreshold) or (math.abs(delta.Y) > iconMoveThreshold) then
+        iconMoved = true
+    end
+    if iconMoved then
+        local newAbs = iconStartAbs + delta
+        newAbs = clampIconPosition(newAbs)
+        IconContainer.Position = UDim2.new(0, newAbs.X, 0, newAbs.Y)
+    end
 end)
 
 Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
@@ -464,6 +502,7 @@ local function createTab(name)
     return contentFrame
 end
 
+-- createToggle ahora evita activación durante scroll:
 local function createToggle(...)
     local args = {...}
     local tabName, toggleName, callback
@@ -499,11 +538,10 @@ local function createToggle(...)
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.ZIndex = toggleFrame.ZIndex + 1
 
-    local btn = Instance.new("TextButton", toggleFrame)
+    local btn = Instance.new("Frame", toggleFrame) -- usar frame para manejar mejor touch vs scroll
     btn.Size = UDim2.new(0,84,0,32)
     btn.Position = UDim2.new(1,-92,0.5,-16)
     btn.BackgroundColor3 = Color3.fromRGB(70,70,78)
-    btn.AutoButtonColor = false
     btn.ZIndex = toggleFrame.ZIndex + 2
     local bcorner = Instance.new("UICorner", btn); bcorner.CornerRadius = UDim.new(1,0)
 
@@ -513,6 +551,15 @@ local function createToggle(...)
     indicator.BackgroundColor3 = Color3.fromRGB(250,250,250)
     indicator.ZIndex = btn.ZIndex + 1
     local icorner = Instance.new("UICorner", indicator); icorner.CornerRadius = UDim.new(1,0)
+
+    -- area tap encima (invisible button) para detectar taps con control de movimiento
+    local tapDetector = Instance.new("TextButton", btn)
+    tapDetector.Size = UDim2.new(1,0,1,0)
+    tapDetector.Position = UDim2.new(0,0,0,0)
+    tapDetector.BackgroundTransparency = 1
+    tapDetector.AutoButtonColor = false
+    tapDetector.Text = ""
+    tapDetector.ZIndex = btn.ZIndex + 3
 
     local enabled = false
     local function refreshVisual()
@@ -524,24 +571,58 @@ local function createToggle(...)
         end)
     end
 
-    local function toggleAction()
+    -- control de touch vs drag para evitar activaciones por scroll:
+    local inputActive = false
+    local startPos = nil
+    local movedTooFar = false
+    local touchThreshold = 8
+
+    tapDetector.InputBegan:Connect(function(input)
+        if input.UserInputType ~= Enum.UserInputType.Touch and input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+        inputActive = true
+        startPos = input.Position
+        movedTooFar = false
+
+        -- conectar InputChanged del mismo input para medir movimiento
+        local conn
+        conn = input.Changed:Connect(function()
+            -- si se termina la interacción, desconectar
+            if input.UserInputState == Enum.UserInputState.End then
+                inputActive = false
+                conn:Disconnect()
+            end
+        end)
+
+        -- si este input produce InputChanged en UserInputService, lo manejamos ahí:
+        local changeConn
+        changeConn = UserInputService.InputChanged:Connect(function(changed)
+            if not inputActive then
+                changeConn:Disconnect()
+                return
+            end
+            if changed == input and changed.Position and startPos then
+                local d = (changed.Position - startPos)
+                if math.abs(d.X) > touchThreshold or math.abs(d.Y) > touchThreshold then
+                    movedTooFar = true
+                end
+            end
+        end)
+    end)
+
+    tapDetector.InputEnded:Connect(function(input)
+        if not inputActive then return end
+        inputActive = false
+        if movedTooFar then
+            -- se movió: fue scroll/drag -> no activar
+            return
+        end
+        -- fue un tap/click limpio -> togglear
         enabled = not enabled
         refreshVisual()
         pcall(callback, enabled)
-    end
-
-    btn.MouseButton1Click:Connect(toggleAction)
-    btn.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch then
-            toggleAction()
-        end
-    end)
-    toggleFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch then
-            toggleAction()
-        end
     end)
 
+    -- API
     local api = {}
     function api:Set(state)
         enabled = state and true or false
