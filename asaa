@@ -554,6 +554,10 @@ public.createTab("Main")
 -- Ejemplos
 public.createToggle("Air Walk", function(state) print("Estado:", state) end)
 public.createButton("Press me", function() print("Hello") end)
+public.createToggle("Air Walk", function(state) print("Estado:", state) end)
+public.createButton("Press me", function() print("Hello") end)
+public.createToggle("Air Walk", function(state) print("Estado:", state) end)
+public.createButton("Press me", function() print("Hello") end)
 public.createNotify("Notify", "Presiona el toggle para usarlo", 2)
 public.useNotify("Notify")
 
