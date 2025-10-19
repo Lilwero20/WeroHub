@@ -1,4 +1,4 @@
-ocal UserInputService = game:GetService("UserInputService")
+local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
 -- Config
@@ -25,8 +25,12 @@ local function new(className, props)
 end
 
 -- Root ScreenGui
-local screenGui = new("ScreenGui", {Name = "NamelessHubGUI", ResetOnSpawn = false, Parent = game:GetService("StarterGui")})
-screenGui.IgnoreGuiInset = true
+local player = game:GetService("Players").LocalPlayer
+local screenGui = new("ScreenGui", {
+    Name = "NamelessHubGUI",
+    ResetOnSpawn = false,
+    Parent = player:WaitForChild("PlayerGui")
+})
 
 -- Responsive scale depending on screen size
 local screenSize = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280,720)
